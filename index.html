@@ -3,6 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <title>POS Pro - Toluca & Metepec</title>
+<script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDXXqcuMvdYZdrwMkw95KwiJ_UD_CIyD8g",
+            authDomain: "mi-negocio-d1931.firebaseapp.com",
+            projectId: "mi-negocio-d1931",
+            storageBucket: "mi-negocio-d1931.appspot.com",
+            appId: "1:543739671500:web:b6abfebbcd6494370f2369"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        window.db = db; // Esto conecta tu sistema con Firebase
+    </script>
+    
     <style>
         :root { --primary: #1877f2; --success: #27ae60; --danger: #e74c3c; --warning: #f59f00; --dark: #2c3e50; --bg: #f0f2f5; }
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); margin: 0; padding: 20px; color: #333; }
