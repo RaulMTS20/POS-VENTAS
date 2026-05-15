@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>POS Pro - Toluca & Metepec</title>
+    <style>
+        :root { --primary: #1877f2; --success: #27ae60; --danger: #e74c3c; --warning: #f59f00; --dark: #2c3e50; --bg: #f0f2f5; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1150px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        
+        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .login-box { background: white; padding: 40px; border-radius: 12px; width: 350px; text-align: center; }
+        .login-box input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        
+        .header-main { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        .btn { padding: 8px 15px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; display: inline-block; text-decoration: none; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-warning { background: var(--warning); color: white; }
+
+        .tabs { display: flex; gap: 5px; margin-bottom: 20px; }
+        .tab-btn { padding: 12px 25px; border: none; background: none; cursor: pointer; font-weight: bold; color: #666; border-bottom: 3px solid transparent; }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { background: #f8f9fa; padding: 12px; text-align: left; font-size: 11px; color: #666; text-transform: uppercase; }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .admin-only, .power-only { display: none; } 
+        .form-control { padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div id="loginOverlay">
+    <div class="login-box">
+        <h2>Stock Master</h2>
+        <input type="text" id="userInput" placeholder="Usuario">
+        <input type="password" id="passInput" placeholder="Contraseña">
+        <button class="btn btn-primary" style="width: 100%" onclick="login()">Entrar</button>
+    </div>
+</div>
+
+<div class="container" id="appContent" style="display:none">
+    <div class="header-main">
+        <div>
+            <h2 style="margin:0">Gestión de Inventarios</h2>
+            <div id="selectorTiendaGlobal" style="margin-top:10px">
+                <strong>Viendo: </strong>
+                <select id="sucursalSelector" onchange="cambiarSucursal()" class="form-control"></select>
+            </div>
+        </div>
+        <div style="text-align:right">
+            <strong>Usuario:</strong> <span id="nombreUsuario"></span><br>
+            <span id="rolUsuario" style="color:#666; font-size: 0.9em;"></span> | <a href="#" onclick="location.reload()" style="color:var(--danger); text-decoration:none">Cerrar Sesión</a>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="verTab('tab-inv', this)">📦 Inventario</button>
+        <button class="tab-btn" onclick="verTab('tab-ventas', this)">🧾 Ventas</button>
+        <button class="tab-btn admin-only" id="tabUsersBtn" onclick="verTab('tab-users', this)">👥 Usuarios</button>
+    </div>
+
+    <!-- INVENTARIO -->
+    <div id="tab-inv" class="tab-content active">
+        <div class="power-only" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;">
+            <h4 style="margin-top:0">📥 Registro de Productos</h4>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                <input type="text" id="p_sku" class="form-control" placeholder="SKU">
+                <input type="text" id="p_nom" class="form-control" placeholder="Producto">
+                <input type="number" id="p_stk" class="form-control" placeholder="Cantidad">
+                <input type="number" id="p_cos" class="form-control" placeholder="Costo">
+                <input type="number" id="p_pre" class="form-control" placeholder="Precio Venta">
+                <select id="p_store" class="form-control"></select>
+            </div>
+            <div style="margin-top:15px; display: flex; gap: 10px; align-items: center;">
+                <button class="btn btn-primary" onclick="agregarProd()">Guardar Manual</button>
+                <div style="border-left: 1px solid #ccc; height: 30px; margin: 0 10px;"></div>
+                <label style="font-size: 12px; font-weight: bold;">Subir Excel (CSV):</label>
+                <input type="file" id="csvFile" accept=".csv" class="form-control" style="font-size: 12px;">
+                <button class="btn btn-success" onclick="importarCSV()">Importar</button>
+                <small title="Formato: SKU,Nombre,Stock,Costo,Precio" style="cursor:help; color: var(--primary)">ⓘ Plantilla</small>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>SKU</th>
+                    <th>Producto</th>
+                    <th>Stock Local</th>
+                    <th class="power-only">Costo</th>
+                    <th>Precio</th>
+                    <th style="text-align: center;">Acción</th>
+                    <th class="power-only">Borrar</th>
+                </tr>
+            </thead>
+            <tbody id="listaInv"></tbody>
+        </table>
+    </div>
+
+    <!-- VENTAS -->
+    <div id="tab-ventas" class="tab-content">
+        <div style="margin-bottom: 15px;" class="power-only">
+            <button class="btn btn-warning" onclick="exportarVentas()">📥 Descargar Reporte (CSV)</button>
+        </div>
+        <table>
+            <thead><tr><th>Fecha</th><th>SKU</th><th>Producto</th><th>Cant.</th><th>Total</th><th>Vendedor</th></tr></thead>
+            <tbody id="listaVentas"></tbody>
+        </table>
+    </div>
+
+    <!-- USUARIOS -->
+    <div id="tab-users" class="tab-content">
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <input type="text" id="u_name" placeholder="Usuario" class="form-control">
+            <input type="password" id="u_pass" placeholder="Password" class="form-control">
+            <select id="u_role" class="form-control">
+                <option value="Empleado">Empleado</option>
+                <option value="Gerente">Gerente</option>
+                <option value="Dueño">Dueño</option>
+            </select>
+            <select id="u_store_new" class="form-control"></select>
+            <button class="btn btn-primary" onclick="crearUsuario()">Crear Usuario</button>
+        </div>
+        <table>
+            <thead><tr><th>USUARIO</th><th>ROL</th><th>TIENDA</th><th style="width:50px"></th></tr></thead>
+            <tbody id="listaUsers"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let sucursales = JSON.parse(localStorage.getItem('stores_v9')) || ["Toluca", "Metepec"];
+    let usuarios = JSON.parse(localStorage.getItem('users_v9')) || [
+        {user: 'admin', pass: '1234', role: 'Dueño', store: 'Todas'}
+    ];
+    let currentUser = null;
+    let sucursalVisualizando = "";
+
+    function login() {
+        const u = document.getElementById('userInput').value;
+        const p = document.getElementById('passInput').value;
+        const userFound = usuarios.find(x => x.user === u && x.pass === p);
+
+        if (userFound) {
+            currentUser = userFound;
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('appContent').style.display = 'block';
+            sucursalVisualizando = (currentUser.role === 'Empleado') ? currentUser.store : sucursales[0];
+            inicializarApp();
+        } else { alert("Datos incorrectos"); }
+    }
+
+    function inicializarApp() {
+        const esAdmin = currentUser.role === 'Dueño';
+        const esPoderoso = currentUser.role === 'Dueño' || currentUser.role === 'Gerente';
+
+        document.getElementById('nombreUsuario').innerText = currentUser.user;
+        document.getElementById('rolUsuario').innerText = currentUser.role;
+        
+        // Control de visibilidad por Rol
+        document.querySelectorAll('.admin-only').forEach(el => el.style.display = esAdmin ? 'block' : 'none');
+        document.querySelectorAll('.power-only').forEach(el => el.style.display = esPoderoso ? 'block' : 'none');
+
+        const selector = document.getElementById('selectorTiendaGlobal');
+        selector.style.visibility = (esAdmin || currentUser.role === 'Gerente') ? 'visible' : 'hidden';
+
+        actualizarSelectores();
+        renderizarTodo();
+    }
+
+    function actualizarSelectores() {
+        const opciones = sucursales.map(s => `<option value="${s}">${s}</option>`).join('');
+        document.getElementById('sucursalSelector').innerHTML = opciones;
+        document.getElementById('p_store').innerHTML = opciones;
+        document.getElementById('u_store_new').innerHTML = opciones;
+        document.getElementById('sucursalSelector').value = sucursalVisualizando;
+    }
+
+    function cambiarSucursal() {
+        sucursalVisualizando = document.getElementById('sucursalSelector').value;
+        renderizarTodo();
+    }
+
+    function crearUsuario() {
+        const u = document.getElementById('u_name').value;
+        const p = document.getElementById('u_pass').value;
+        const r = document.getElementById('u_role').value;
+        const s = document.getElementById('u_store_new').value;
+        if(!u || !p) return alert("Ingresa usuario y contraseña");
+        usuarios.push({user: u, pass: p, role: r, store: s});
+        localStorage.setItem('users_v9', JSON.stringify(usuarios));
+        document.getElementById('u_name').value = "";
+        document.getElementById('u_pass').value = "";
+        renderizarTodo();
+    }
+
+    function agregarProd() {
+        const sku = document.getElementById('p_sku').value, nom = document.getElementById('p_nom').value;
+        const stk = parseInt(document.getElementById('p_stk').value), cos = parseFloat(document.getElementById('p_cos').value);
+        const pre = parseFloat(document.getElementById('p_pre').value), tienda = document.getElementById('p_store').value;
+        if(!sku || isNaN(stk)) return;
+        saveToInv(tienda, {sku, nombre: nom, stock: stk, costo: cos, precio: pre});
+        renderizarTodo();
+    }
+
+    function saveToInv(tienda, p) {
+        let inv = JSON.parse(localStorage.getItem(tienda + "_inv")) || [];
+        const ex = inv.find(x => x.sku === p.sku);
+        if(ex) { 
+            ex.stock += p.stock; 
+            ex.precio = p.precio; // Actualiza precio si se sube de nuevo
+            ex.costo = p.costo;
+        } else { 
+            inv.push(p); 
+        }
+        localStorage.setItem(tienda + "_inv", JSON.stringify(inv));
+    }
+
+    // --- NUEVA FUNCIÓN: IMPORTAR EXCEL (CSV) ---
+    function importarCSV() {
+        const fileInput = document.getElementById('csvFile');
+        const tienda = document.getElementById('p_store').value;
+        if (!fileInput.files[0]) return alert("Selecciona un archivo CSV");
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const lines = e.target.result.split('\n');
+            let count = 0;
+            lines.forEach((line, index) => {
+                const data = line.split(',');
+                if (data.length >= 5 && index > 0) { // Ignorar cabecera
+                    const p = {
+                        sku: data[0].trim(),
+                        nombre: data[1].trim(),
+                        stock: parseInt(data[2]),
+                        costo: parseFloat(data[3]),
+                        precio: parseFloat(data[4])
+                    };
+                    if (p.sku) {
+                        saveToInv(tienda, p);
+                        count++;
+                    }
+                }
+            });
+            alert(`Se importaron/actualizaron ${count} productos en ${tienda}`);
+            renderizarTodo();
+            fileInput.value = "";
+        };
+        reader.readAsText(fileInput.files[0]);
+    }
+
+    // --- NUEVA FUNCIÓN: EXPORTAR VENTAS ---
+    function exportarVentas() {
+        const vtas = JSON.parse(localStorage.getItem(sucursalVisualizando + "_ventas")) || [];
+        if (vtas.length === 0) return alert("No hay ventas para exportar");
+
+        let csvContent = "Fecha,SKU,Producto,Cantidad,Total,Vendedor\n";
+        vtas.forEach(v => {
+            csvContent += `${v.fecha},${v.sku},${v.nombre},${v.cantidad},${v.total},${v.vendedor}\n`;
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Ventas_${sucursalVisualizando}_${new Date().toLocaleDateString()}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function registrarVenta(idx, qty) {
+        let inv = JSON.parse(localStorage.getItem(sucursalVisualizando + "_inv")) || [];
+        let vtas = JSON.parse(localStorage.getItem(sucursalVisualizando + "_ventas")) || [];
+        const cant = parseInt(qty);
+        if (inv[idx].stock >= cant && cant > 0) {
+            inv[idx].stock -= cant;
+            vtas.unshift({
+                fecha: new Date().toLocaleString(),
+                sku: inv[idx].sku,
+                nombre: inv[idx].nombre,
+                cantidad: cant,
+                total: inv[idx].precio * cant,
+                vendedor: currentUser.user
+            });
+            localStorage.setItem(sucursalVisualizando + "_inv", JSON.stringify(inv));
+            localStorage.setItem(sucursalVisualizando + "_ventas", JSON.stringify(vtas));
+            renderizarTodo();
+        } else { alert("Sin stock"); }
+    }
+
+    function renderizarTodo() {
+        const esPoderoso = currentUser.role === 'Dueño' || currentUser.role === 'Gerente';
+        const inv = JSON.parse(localStorage.getItem(sucursalVisualizando + "_inv")) || [];
+        const vtas = JSON.parse(localStorage.getItem(sucursalVisualizando + "_ventas")) || [];
+
+        document.getElementById('listaInv').innerHTML = inv.map((p, i) => `
+            <tr>
+                <td>${p.sku}</td><td>${p.nombre}</td><td>${p.stock}</td>
+                <td class="power-only" style="display:${esPoderoso?'table-cell':'none'}">$${p.costo}</td>
+                <td>$${p.precio}</td>
+                <td style="text-align:center">
+                    <input type="number" id="q_${i}" value="1" style="width:40px">
+                    <button class="btn btn-success" onclick="registrarVenta(${i}, document.getElementById('q_${i}').value)">Vender</button>
+                </td>
+                <td class="power-only" style="display:${esPoderoso?'table-cell':'none'}">
+                    <button class="btn btn-danger" onclick="eliminarProd(${i})">X</button>
+                </td>
+            </tr>`).join('');
+
+        document.getElementById('listaVentas').innerHTML = vtas.map(v => `
+            <tr><td>${v.fecha}</td><td>${v.sku}</td><td>${v.nombre}</td><td>${v.cantidad}</td><td>$${v.total}</td><td>${v.vendedor}</td></tr>
+        `).join('');
+
+        if(currentUser.role === 'Dueño') {
+            document.getElementById('listaUsers').innerHTML = usuarios.map((u, i) => `
+                <tr>
+                    <td>${u.user}</td><td>${u.role}</td><td>${u.store}</td>
+                    <td>${u.user !== 'admin' ? `<button class="btn btn-danger" onclick="eliminarUser(${i})" style="padding:2px 8px">X</button>` : ''}</td>
+                </tr>
+            `).join('');
+        }
+    }
+
+    function eliminarUser(i) {
+        if(confirm("¿Eliminar usuario?")) {
+            usuarios.splice(i, 1);
+            localStorage.setItem('users_v9', JSON.stringify(usuarios));
+            renderizarTodo();
+        }
+    }
+
+    function verTab(id, btn) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        btn.classList.add('active');
+    }
+
+    function eliminarProd(idx) {
+        let inv = JSON.parse(localStorage.getItem(sucursalVisualizando + "_inv")) || [];
+        inv.splice(idx, 1);
+        localStorage.setItem(sucursalVisualizando + "_inv", JSON.stringify(inv));
+        renderizarTodo();
+    }
+</script>
+</body>
+</html>
