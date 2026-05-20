@@ -222,9 +222,44 @@
         const sku = document.getElementById('p_sku').value, nom = document.getElementById('p_nom').value;
         const stk = parseInt(document.getElementById('p_stk').value), cos = parseFloat(document.getElementById('p_cos').value);
         const pre = parseFloat(document.getElementById('p_pre').value), tienda = document.getElementById('p_store').value;
-        if(!sku || isNaN(stk)) return;
+        
+        // 1. Candado con aviso si faltan datos
+        if(!sku || isNaN(stk)) {
+            alert("⚠️ Falta información: Debes ingresar al menos el SKU y la Cantidad.");
+            return;
+        }
+        
+        // 2. Guarda en la tabla local
         saveToInv(tienda, {sku, nombre: nom, stock: stk, costo: cos, precio: pre});
+        
+        // 3. Envía los datos a Firebase
+        if (window.db) {
+            import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js").then((module) => {
+                const { doc, setDoc } = module;
+                setDoc(doc(window.db, "Inventario_" + tienda, sku), {
+                    sku: sku,
+                    nombre: nom,
+                    stock: stk,
+                    costo: cos,
+                    precio: pre,
+                    tienda: tienda
+                }).then(() => {
+                    console.log("Guardado en la nube correctamente");
+                }).catch((error) => {
+                    console.error("Error al guardar en Firebase: ", error);
+                });
+            });
+        }
+        
+        // 4. Limpia los cuadros de texto para el siguiente producto
+        document.getElementById('p_sku').value = '';
+        document.getElementById('p_nom').value = '';
+        document.getElementById('p_stk').value = '';
+        document.getElementById('p_cos').value = '';
+        document.getElementById('p_pre').value = '';
+
         renderizarTodo();
+    
     }
 
     function saveToInv(tienda, p) {
