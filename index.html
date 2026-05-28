@@ -2,405 +2,292 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>POS Pro - Toluca & Metepec</title>
-<script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyDXXqcuMvdYZdrwMkw95KwiJ_UD_CIyD8g",
-            authDomain: "mi-negocio-d1931.firebaseapp.com",
-            projectId: "mi-negocio-d1931",
-            storageBucket: "mi-negocio-d1931.firebaseapp.com",
-            appId: "1:543739671500:web:b6abfebbcd6494370f2369"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        window.db = db; // Esto conecta tu sistema con Firebase
-    </script>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOOMBOX - Gestión de Inventarios</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root { --primary: #1877f2; --success: #27ae60; --danger: #e74c3c; --warning: #f59f00; --dark: #2c3e50; --bg: #f0f2f5; }
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 1150px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        
-        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-        .login-box { background: white; padding: 40px; border-radius: 12px; width: 350px; text-align: center; }
-        .login-box input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        
-        .header-main { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
-        .btn { padding: 8px 15px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; display: inline-block; text-decoration: none; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-danger { background: var(--danger); color: white; }
-        .btn-success { background: var(--success); color: white; }
-        .btn-warning { background: var(--warning); color: white; }
-
-        .tabs { display: flex; gap: 5px; margin-bottom: 20px; }
-        .tab-btn { padding: 12px 25px; border: none; background: none; cursor: pointer; font-weight: bold; color: #666; border-bottom: 3px solid transparent; }
-        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
-
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { background: #f8f9fa; padding: 12px; text-align: left; font-size: 11px; color: #666; text-transform: uppercase; }
-        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
-        
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        
-        .admin-only, .power-only { display: none; } 
-        .form-control { padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .brand-text { color: #f59e0b; } /* Color naranja similar a BOOMBOX */
     </style>
 </head>
-<body>
+<body class="bg-slate-50 text-gray-800 font-sans">
 
-<div id="loginOverlay">
-    <div class="login-box">
-        <h2>Stock Master</h2>
-        <input type="text" id="userInput" placeholder="Usuario">
-        <input type="password" id="passInput" placeholder="Contraseña">
-        <button class="btn btn-primary" style="width: 100%" onclick="login()">Entrar</button>
-    </div>
-</div>
-
-<div class="container" id="appContent" style="display:none">
-    <div class="header-main">
-        <div>
-            <h2 style="margin:0">Gestión de Inventarios</h2>
-            <div id="selectorTiendaGlobal" style="margin-top:10px">
-                <strong>Viendo: </strong>
-                <select id="sucursalSelector" onchange="cambiarSucursal()" class="form-control"></select>
-            </div>
-        </div>
-        <div style="text-align:right">
-            <strong>Usuario:</strong> <span id="nombreUsuario"></span><br>
-            <span id="rolUsuario" style="color:#666; font-size: 0.9em;"></span> | <a href="#" onclick="location.reload()" style="color:var(--danger); text-decoration:none">Cerrar Sesión</a>
-        </div>
-    </div>
-
-    <div class="tabs">
-        <button class="tab-btn active" onclick="verTab('tab-inv', this)">📦 Inventario</button>
-        <button class="tab-btn" onclick="verTab('tab-ventas', this)">🧾 Ventas</button>
-        <button class="tab-btn admin-only" id="tabUsersBtn" onclick="verTab('tab-users', this)">👥 Usuarios</button>
-    </div>
-
-    <!-- INVENTARIO -->
-    <div id="tab-inv" class="tab-content active">
-        <div class="power-only" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;">
-            <h4 style="margin-top:0">📥 Registro de Productos</h4>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                <input type="text" id="p_sku" class="form-control" placeholder="SKU">
-                <input type="text" id="p_nom" class="form-control" placeholder="Producto">
-                <input type="number" id="p_stk" class="form-control" placeholder="Cantidad">
-                <input type="number" id="p_cos" class="form-control" placeholder="Costo">
-                <input type="number" id="p_pre" class="form-control" placeholder="Precio Venta">
-                <select id="p_store" class="form-control"></select>
-            </div>
-            <div style="margin-top:15px; display: flex; gap: 10px; align-items: center;">
-                <button class="btn btn-primary" onclick="agregarProd()">Guardar Manual</button>
-                <div style="border-left: 1px solid #ccc; height: 30px; margin: 0 10px;"></div>
-                <label style="font-size: 12px; font-weight: bold;">Subir Excel (CSV):</label>
-                <input type="file" id="csvFile" accept=".csv" class="form-control" style="font-size: 12px;">
-                <button class="btn btn-success" onclick="importarCSV()">Importar</button>
-                <small title="Formato: SKU,Nombre,Stock,Costo,Precio" style="cursor:help; color: var(--primary)">ⓘ Plantilla</small>
-            </div>
-        </div>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>SKU</th>
-                    <th>Producto</th>
-                    <th>Stock Local</th>
-                    <th class="power-only">Costo</th>
-                    <th>Precio</th>
-                    <th style="text-align: center;">Acción</th>
-                    <th class="power-only">Borrar</th>
-                </tr>
-            </thead>
-            <tbody id="listaInv"></tbody>
-        </table>
-    </div>
-
-    <!-- VENTAS -->
-    <div id="tab-ventas" class="tab-content">
-        <div style="margin-bottom: 15px;" class="power-only">
-            <button class="btn btn-warning" onclick="exportarVentas()">📥 Descargar Reporte (CSV)</button>
-        </div>
-        <table>
-            <thead><tr><th>Fecha</th><th>SKU</th><th>Producto</th><th>Cant.</th><th>Total</th><th>Vendedor</th></tr></thead>
-            <tbody id="listaVentas"></tbody>
-        </table>
-    </div>
-
-    <!-- USUARIOS -->
-    <div id="tab-users" class="tab-content">
-        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-            <input type="text" id="u_name" placeholder="Usuario" class="form-control">
-            <input type="password" id="u_pass" placeholder="Password" class="form-control">
-            <select id="u_role" class="form-control">
-                <option value="Empleado">Empleado</option>
-                <option value="Gerente">Gerente</option>
-                <option value="Dueño">Dueño</option>
-            </select>
-            <select id="u_store_new" class="form-control"></select>
-            <button class="btn btn-primary" onclick="crearUsuario()">Crear Usuario</button>
-        </div>
-        <table>
-            <thead><tr><th>USUARIO</th><th>ROL</th><th>TIENDA</th><th style="width:50px"></th></tr></thead>
-            <tbody id="listaUsers"></tbody>
-        </table>
-    </div>
-</div>
-
-<script>
-    let sucursales = JSON.parse(localStorage.getItem('stores_v9')) || ["Toluca", "Metepec"];
-    let usuarios = JSON.parse(localStorage.getItem('users_v9')) || [
-        {user: 'admin', pass: '1234', role: 'Dueño', store: 'Todas'}
-    ];
-    let currentUser = null;
-    let sucursalVisualizando = "";
-
-    function login() {
-        const u = document.getElementById('userInput').value.trim();
-        const p = document.getElementById('passInput').value.trim();
-
-        // Base de datos SaaS (Multicliente)
-        const clientesSaaS = {
-            "admin": { pass: "admin", empresaId: "DemoInterna", rol: "Dueño", store: "Toluca" },
-            "ferre_toluca": { pass: "12345", empresaId: "FerreteriaGomez", rol: "Dueño", store: "Toluca" },
-            "boutique_met": { pass: "67890", empresaId: "ModaMetepec", rol: "Encargado", store: "Metepec" }
-        };
-
-        const userFound = clientesSaaS[u];
-
-        if (userFound && userFound.pass === p) {
-            // Se guardan las credenciales y el ID único del negocio
-            currentUser = { user: u, role: userFound.rol, store: userFound.store };
-            localStorage.setItem('empresaId', userFound.empresaId);
-
-            document.getElementById('loginOverlay').style.display = 'none';
-            document.getElementById('appContent').style.display = 'block';
+    <!-- PANTALLA DE AUTENTICACIÓN (LOGIN Y REGISTRO) -->
+    <div id="authScreen" class="min-h-screen flex items-center justify-center bg-gray-900">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-96 text-center">
             
-            sucursalVisualizando = (currentUser.role === 'Empleado') ? currentUser.store : sucursales[0];
-            inicializarApp();
-        } else {
-            alert("⚠️ Datos o ID de negocio incorrectos");
-        }
-    }
+            <!-- Logo BOOMBOX -->
+            <img src="BOOMBOX.png" alt="BOOMBOX Logo" class="w-32 mx-auto mb-2" onerror="this.src='https://via.placeholder.com/150?text=BOOMBOX'">
+            <h1 class="text-3xl font-black mb-6 brand-text tracking-widest">BOOMBOX</h1>
 
-    function inicializarApp() {
-        const esAdmin = currentUser.role === 'Dueño';
-        const esPoderoso = currentUser.role === 'Dueño' || currentUser.role === 'Gerente';
+            <!-- Formulario de Login -->
+            <div id="loginForm">
+                <h2 class="text-lg font-bold text-gray-700 mb-4">Iniciar Sesión</h2>
+                <input type="text" id="loginUser" placeholder="Usuario" class="w-full mb-3 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                <input type="password" id="loginPass" placeholder="Contraseña" class="w-full mb-4 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                <button onclick="iniciarSesion()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg transition">Entrar</button>
+                <p class="mt-4 text-sm text-gray-500">¿Nuevo negocio? <span onclick="toggleAuth()" class="text-orange-500 cursor-pointer font-bold">Regístrate aquí</span></p>
+            </div>
 
-        document.getElementById('nombreUsuario').innerText = currentUser.user;
-        document.getElementById('rolUsuario').innerText = currentUser.role;
+            <!-- Formulario de Registro (Oculto por defecto) -->
+            <div id="registerForm" class="hidden">
+                <h2 class="text-lg font-bold text-gray-700 mb-4">Registrar Negocio</h2>
+                <input type="text" id="regEmpresa" placeholder="Nombre de tu Negocio" class="w-full mb-3 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="text" id="regZona" placeholder="Zona Principal (Ej. CDMX, Monterrey)" class="w-full mb-3 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="text" id="regUser" placeholder="Crear Usuario" class="w-full mb-3 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="password" id="regPass" placeholder="Crear Contraseña" class="w-full mb-4 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button onclick="registrarNegocio()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Crear Cuenta</button>
+                <p class="mt-4 text-sm text-gray-500">¿Ya tienes cuenta? <span onclick="toggleAuth()" class="text-blue-600 cursor-pointer font-bold">Inicia sesión</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA PRINCIPAL DE LA APLICACIÓN -->
+    <div id="appScreen" class="hidden min-h-screen">
         
-        // Control de visibilidad por Rol
-        document.querySelectorAll('.admin-only').forEach(el => el.style.display = esAdmin ? 'block' : 'none');
-        document.querySelectorAll('.power-only').forEach(el => el.style.display = esPoderoso ? 'block' : 'none');
+        <!-- Navbar -->
+        <nav class="bg-white shadow-md p-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <img src="BOOMBOX.png" alt="BOOMBOX Logo" class="w-10 h-10" onerror="this.style.display='none'">
+                <h1 class="text-2xl font-black brand-text tracking-widest">BOOMBOX</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-right">
+                    <p class="font-bold text-gray-800" id="displayEmpresa">Negocio</p>
+                    <p class="text-xs text-gray-500" id="displayUser">usuario</p>
+                </div>
+                <button onclick="cerrarSesion()" class="text-red-500 hover:text-red-700 font-bold text-sm">Cerrar Sesión</button>
+            </div>
+        </nav>
 
-        const selector = document.getElementById('selectorTiendaGlobal');
-        selector.style.visibility = (esAdmin || currentUser.role === 'Gerente') ? 'visible' : 'hidden';
-
-        actualizarSelectores();
-        renderizarTodo();
-    }
-
-    function actualizarSelectores() {
-        const opciones = sucursales.map(s => `<option value="${s}">${s}</option>`).join('');
-        document.getElementById('sucursalSelector').innerHTML = opciones;
-        document.getElementById('p_store').innerHTML = opciones;
-        document.getElementById('u_store_new').innerHTML = opciones;
-        document.getElementById('sucursalSelector').value = sucursalVisualizando;
-    }
-
-    function cambiarSucursal() {
-        sucursalVisualizando = document.getElementById('sucursalSelector').value;
-        renderizarTodo();
-    }
-
-    function crearUsuario() {
-        const u = document.getElementById('u_name').value;
-        const p = document.getElementById('u_pass').value;
-        const r = document.getElementById('u_role').value;
-        const s = document.getElementById('u_store_new').value;
-        if(!u || !p) return alert("Ingresa usuario y contraseña");
-        usuarios.push({user: u, pass: p, role: r, store: s});
-        localStorage.setItem('users_v9', JSON.stringify(usuarios));
-        document.getElementById('u_name').value = "";
-        document.getElementById('u_pass').value = "";
-        renderizarTodo();
-    }
-
-function login() {
-        const u = document.getElementById('userInput').value.trim();
-        const p = document.getElementById('passInput').value.trim();
-
-        // Base de datos SaaS (Multicliente)
-        const clientesSaaS = {
-            "admin": { pass: "admin", empresaId: "DemoInterna", rol: "Dueño", store: "Toluca" },
-            "ferre_toluca": { pass: "12345", empresaId: "FerreteriaGomez", rol: "Dueño", store: "Toluca" },
-            "boutique_met": { pass: "67890", empresaId: "ModaMetepec", rol: "Encargado", store: "Metepec" }
-        };
-
-        const userFound = clientesSaaS[u];
-
-        if (userFound && userFound.pass === p) {
-            // Se guardan las credenciales y el ID único del negocio
-            currentUser = { user: u, role: userFound.rol, store: userFound.store };
-            localStorage.setItem('empresaId', userFound.empresaId);
-
-            document.getElementById('loginOverlay').style.display = 'none';
-            document.getElementById('appContent').style.display = 'block';
+        <div class="max-w-6xl mx-auto p-6 mt-4">
             
-            sucursalVisualizando = (currentUser.role === 'Empleado') ? currentUser.store : sucursales[0];
-            inicializarApp();
-        } else {
-            alert("⚠️ Datos o ID de negocio incorrectos");
-        }
-    }
+            <!-- Selector de Zona Dinámico -->
+            <div class="bg-white p-4 rounded-lg shadow-sm mb-6 flex items-center gap-4 border-l-4 border-orange-500">
+                <label class="font-bold text-gray-700">Zona actual:</label>
+                <select id="zonaSelect" class="p-2 border rounded bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    <!-- Se llena automáticamente con las zonas del usuario -->
+                </select>
+                <button onclick="agregarNuevaZona()" class="text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded">+ Agregar Zona</button>
+            </div>
 
-    function saveToInv(tienda, p) {
-        let inv = JSON.parse(localStorage.getItem(tienda + "_inv")) || [];
-        const ex = inv.find(x => x.sku === p.sku);
-        if(ex) { 
-            ex.stock += p.stock; 
-            ex.precio = p.precio; // Actualiza precio si se sube de nuevo
-            ex.costo = p.costo;
-        } else { 
-            inv.push(p); 
-        }
-        localStorage.setItem(tienda + "_inv", JSON.stringify(inv));
-    }
+            <!-- Formulario de Inventario -->
+            <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2"><span class="text-xl">📦</span> Registro de Productos</h2>
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <input type="text" id="p_sku" placeholder="SKU" class="p-3 border rounded focus:ring-2 focus:ring-orange-500">
+                    <input type="text" id="p_nom" placeholder="Nombre del Producto" class="p-3 border rounded focus:ring-2 focus:ring-orange-500 md:col-span-2">
+                    <input type="number" id="p_stk" placeholder="Stock" class="p-3 border rounded focus:ring-2 focus:ring-orange-500">
+                    <input type="number" id="p_pre" placeholder="Precio Venta" class="p-3 border rounded focus:ring-2 focus:ring-orange-500">
+                </div>
+                <button onclick="guardarProducto()" class="mt-4 w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded shadow transition">Guardar en Firebase</button>
+            </div>
 
-    // --- NUEVA FUNCIÓN: IMPORTAR EXCEL (CSV) ---
-    function importarCSV() {
-        const fileInput = document.getElementById('csvFile');
-        const tienda = document.getElementById('p_store').value;
-        if (!fileInput.files[0]) return alert("Selecciona un archivo CSV");
+            <!-- Indicador de éxito -->
+            <div id="mensajeExito" class="hidden bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded">
+                <p class="font-bold">¡Guardado exitoso!</p>
+                <p class="text-sm">El producto se ha subido a la nube correctamente.</p>
+            </div>
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const lines = e.target.result.split('\n');
-            let count = 0;
-            lines.forEach((line, index) => {
-                const data = line.split(',');
-                if (data.length >= 5 && index > 0) { // Ignorar cabecera
-                    const p = {
-                        sku: data[0].trim(),
-                        nombre: data[1].trim(),
-                        stock: parseInt(data[2]),
-                        costo: parseFloat(data[3]),
-                        precio: parseFloat(data[4])
-                    };
-                    if (p.sku) {
-                        saveToInv(tienda, p);
-                        count++;
-                    }
-                }
-            });
-            alert(`Se importaron/actualizaron ${count} productos en ${tienda}`);
-            renderizarTodo();
-            fileInput.value = "";
+        </div>
+    </div>
+
+    <!-- LÓGICA DE FIREBASE Y LA APLICACIÓN (COMO MÓDULO) -->
+    <script type="module">
+        // Importaciones de Firebase Moderno
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, collection } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // =========================================================
+        // 1. PEGA AQUÍ TU CONFIGURACIÓN DE FIREBASE
+        // =========================================================
+       
+           // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDXXqcuMvdYZdrwMkw95KwiJ_UD_CIyD8g",
+  authDomain: "mi-negocio-d1931.firebaseapp.com",
+  projectId: "mi-negocio-d1931",
+  storageBucket: "mi-negocio-d1931.firebasestorage.app",
+  messagingSenderId: "543739671500",
+  appId: "1:543739671500:web:b6abfebbcd6494370f2369",
+  measurementId: "G-EKFYTVXJ97"
+};
+       
+
+        // Inicializar Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // =========================================================
+        // 2. LÓGICA DE LA INTERFAZ
+        // =========================================================
+        
+        // Alternar entre Login y Registro
+        window.toggleAuth = () => {
+            const login = document.getElementById('loginForm');
+            const register = document.getElementById('registerForm');
+            login.classList.toggle('hidden');
+            register.classList.toggle('hidden');
         };
-        reader.readAsText(fileInput.files[0]);
-    }
 
-    // --- NUEVA FUNCIÓN: EXPORTAR VENTAS ---
-    function exportarVentas() {
-        const vtas = JSON.parse(localStorage.getItem(sucursalVisualizando + "_ventas")) || [];
-        if (vtas.length === 0) return alert("No hay ventas para exportar");
+        // =========================================================
+        // 3. LÓGICA SAAS: REGISTRO Y LOGIN
+        // =========================================================
 
-        let csvContent = "Fecha,SKU,Producto,Cantidad,Total,Vendedor\n";
-        vtas.forEach(v => {
-            csvContent += `${v.fecha},${v.sku},${v.nombre},${v.cantidad},${v.total},${v.vendedor}\n`;
-        });
+        window.registrarNegocio = async () => {
+            const empresa = document.getElementById('regEmpresa').value.trim();
+            const zona = document.getElementById('regZona').value.trim();
+            const user = document.getElementById('regUser').value.trim();
+            const pass = document.getElementById('regPass').value.trim();
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", `Ventas_${sucursalVisualizando}_${new Date().toLocaleDateString()}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
+            if(!empresa || !zona || !user || !pass) {
+                alert("⚠️ Por favor llena todos los campos del registro.");
+                return;
+            }
 
-    function registrarVenta(idx, qty) {
-        let inv = JSON.parse(localStorage.getItem(sucursalVisualizando + "_inv")) || [];
-        let vtas = JSON.parse(localStorage.getItem(sucursalVisualizando + "_ventas")) || [];
-        const cant = parseInt(qty);
-        if (inv[idx].stock >= cant && cant > 0) {
-            inv[idx].stock -= cant;
-            vtas.unshift({
-                fecha: new Date().toLocaleString(),
-                sku: inv[idx].sku,
-                nombre: inv[idx].nombre,
-                cantidad: cant,
-                total: inv[idx].precio * cant,
-                vendedor: currentUser.user
+            try {
+                // Guarda el nuevo usuario en Firebase en la colección "SaaS_Usuarios"
+                await setDoc(doc(db, "SaaS_Usuarios", user), {
+                    empresaId: empresa.replace(/\s+/g, ''), // Quita espacios
+                    pass: pass,
+                    zonas: [zona] // Guarda la zona inicial como un arreglo
+                });
+                
+                alert("¡Cuenta creada con éxito! Ahora inicia sesión.");
+                toggleAuth(); // Regresa al login
+            } catch (error) {
+                console.error("Error al registrar:", error);
+                alert("Hubo un error al conectar con Firebase.");
+            }
+        };
+
+        window.iniciarSesion = async () => {
+            const user = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
+
+            if(!user || !pass) return alert("⚠️ Ingresa usuario y contraseña");
+
+            try {
+                // Busca al usuario en Firebase
+                const userDoc = await getDoc(doc(db, "SaaS_Usuarios", user));
+                
+                if (userDoc.exists()) {
+                    const datos = userDoc.data();
+                    if (datos.pass === pass) {
+                        // Credenciales correctas: Guardar sesión
+                        localStorage.setItem('currentUser', user);
+                        localStorage.setItem('empresaId', datos.empresaId);
+                        localStorage.setItem('zonas', JSON.stringify(datos.zonas));
+                        
+                        iniciarApp();
+                    } else {
+                        alert("⚠️ Contraseña incorrecta");
+                    }
+                } else {
+                    alert("⚠️ El usuario no existe");
+                }
+            } catch (error) {
+                console.error("Error en login:", error);
+                alert("Error de conexión con la base de datos.");
+            }
+        };
+
+        window.cerrarSesion = () => {
+            localStorage.clear();
+            location.reload();
+        };
+
+        // =========================================================
+        // 4. LÓGICA DEL INVENTARIO MULTICLIENTE
+        // =========================================================
+
+        function iniciarApp() {
+            // Ocultar Auth, mostrar App
+            document.getElementById('authScreen').classList.add('hidden');
+            document.getElementById('appScreen').classList.remove('hidden');
+
+            const empresa = localStorage.getItem('empresaId');
+            const user = localStorage.getItem('currentUser');
+            const zonas = JSON.parse(localStorage.getItem('zonas') || "[]");
+
+            document.getElementById('displayEmpresa').innerText = empresa;
+            document.getElementById('displayUser').innerText = "Usuario: " + user;
+
+            // Llenar el selector de zonas dinámicamente
+            const selectZona = document.getElementById('zonaSelect');
+            selectZona.innerHTML = "";
+            zonas.forEach(z => {
+                let option = document.createElement("option");
+                option.text = z;
+                option.value = z;
+                selectZona.add(option);
             });
-            localStorage.setItem(sucursalVisualizando + "_inv", JSON.stringify(inv));
-            localStorage.setItem(sucursalVisualizando + "_ventas", JSON.stringify(vtas));
-            renderizarTodo();
-        } else { alert("Sin stock"); }
-    }
-
-    function renderizarTodo() {
-        const esPoderoso = currentUser.role === 'Dueño' || currentUser.role === 'Gerente';
-        const inv = JSON.parse(localStorage.getItem(sucursalVisualizando + "_inv")) || [];
-        const vtas = JSON.parse(localStorage.getItem(sucursalVisualizando + "_ventas")) || [];
-
-        document.getElementById('listaInv').innerHTML = inv.map((p, i) => `
-            <tr>
-                <td>${p.sku}</td><td>${p.nombre}</td><td>${p.stock}</td>
-                <td class="power-only" style="display:${esPoderoso?'table-cell':'none'}">$${p.costo}</td>
-                <td>$${p.precio}</td>
-                <td style="text-align:center">
-                    <input type="number" id="q_${i}" value="1" style="width:40px">
-                    <button class="btn btn-success" onclick="registrarVenta(${i}, document.getElementById('q_${i}').value)">Vender</button>
-                </td>
-                <td class="power-only" style="display:${esPoderoso?'table-cell':'none'}">
-                    <button class="btn btn-danger" onclick="eliminarProd(${i})">X</button>
-                </td>
-            </tr>`).join('');
-
-        document.getElementById('listaVentas').innerHTML = vtas.map(v => `
-            <tr><td>${v.fecha}</td><td>${v.sku}</td><td>${v.nombre}</td><td>${v.cantidad}</td><td>$${v.total}</td><td>${v.vendedor}</td></tr>
-        `).join('');
-
-        if(currentUser.role === 'Dueño') {
-            document.getElementById('listaUsers').innerHTML = usuarios.map((u, i) => `
-                <tr>
-                    <td>${u.user}</td><td>${u.role}</td><td>${u.store}</td>
-                    <td>${u.user !== 'admin' ? `<button class="btn btn-danger" onclick="eliminarUser(${i})" style="padding:2px 8px">X</button>` : ''}</td>
-                </tr>
-            `).join('');
         }
-    }
 
-    function eliminarUser(i) {
-        if(confirm("¿Eliminar usuario?")) {
-            usuarios.splice(i, 1);
-            localStorage.setItem('users_v9', JSON.stringify(usuarios));
-            renderizarTodo();
-        }
-    }
+        window.agregarNuevaZona = async () => {
+            const nuevaZona = prompt("Ingresa el nombre de la nueva zona/sucursal:");
+            if(nuevaZona) {
+                const user = localStorage.getItem('currentUser');
+                const zonasArray = JSON.parse(localStorage.getItem('zonas') || "[]");
+                
+                if(!zonasArray.includes(nuevaZona)) {
+                    zonasArray.push(nuevaZona);
+                    // Actualiza en Firebase
+                    await setDoc(doc(db, "SaaS_Usuarios", user), { zonas: zonasArray }, { merge: true });
+                    // Actualiza local
+                    localStorage.setItem('zonas', JSON.stringify(zonasArray));
+                    iniciarApp(); // Refresca el selector
+                }
+            }
+        };
 
-    function verTab(id, btn) {
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        btn.classList.add('active');
-    }
+        window.guardarProducto = async () => {
+            const sku = document.getElementById('p_sku').value.trim();
+            const nom = document.getElementById('p_nom').value.trim();
+            const stk = parseInt(document.getElementById('p_stk').value);
+            const pre = parseFloat(document.getElementById('p_pre').value);
+            const zonaActual = document.getElementById('zonaSelect').value;
+            const empresaId = localStorage.getItem('empresaId');
 
-    function eliminarProd(idx) {
-        let inv = JSON.parse(localStorage.getItem(sucursalVisualizando + "_inv")) || [];
-        inv.splice(idx, 1);
-        localStorage.setItem(sucursalVisualizando + "_inv", JSON.stringify(inv));
-        renderizarTodo();
-    }
-</script>
+            if(!sku || isNaN(stk) || !zonaActual) {
+                alert("⚠️ Faltan datos: Asegúrate de ingresar el SKU, el Stock y tener una Zona seleccionada.");
+                return;
+            }
+
+            // CREA EL NOMBRE DE LA RUTA EN FIREBASE: Ej. "MiFerreteria_Inventario_Monterrey"
+            const rutaColeccion = `${empresaId}_Inventario_${zonaActual}`;
+
+            try {
+                // Guarda directo en Firestore
+                await setDoc(doc(db, rutaColeccion, sku), {
+                    sku: sku,
+                    nombre: nom,
+                    stock: stk,
+                    precio: pre,
+                    zona: zonaActual,
+                    fecha_registro: new Date().toISOString()
+                });
+
+                // Mostrar mensaje de éxito y limpiar
+                document.getElementById('mensajeExito').classList.remove('hidden');
+                setTimeout(() => document.getElementById('mensajeExito').classList.add('hidden'), 3000);
+
+                document.getElementById('p_sku').value = '';
+                document.getElementById('p_nom').value = '';
+                document.getElementById('p_stk').value = '';
+                document.getElementById('p_pre').value = '';
+
+            } catch (error) {
+                console.error("Error al guardar en Firestore:", error);
+                alert("Error al subir a la nube. Revisa tu consola.");
+            }
+        };
+
+        // Auto-login si ya hay sesión guardada
+        window.onload = () => {
+            if(localStorage.getItem('currentUser')) {
+                iniciarApp();
+            }
+        };
+    </script>
 </body>
 </html>
