@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BOOMBOX - POS & Inventario</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         .brand-text { color: #f59e0b; }
         .tab-active { border-bottom: 4px solid #f59e0b; color: #f59e0b; font-weight: bold; }
@@ -14,24 +15,25 @@
 
     <div id="authScreen" class="min-h-screen flex items-center justify-center bg-gray-900">
         <div class="bg-white p-8 rounded-xl shadow-2xl w-96 text-center">
-       <img src="ICONO SF.png" alt="BOOMBOX Icono" class="w-24 mx-auto mb-4">
-<img src="BOOMBOX SF.png" alt="BOOMBOX" class="h-12 mx-auto mb-6">
+            
+            <img src="ICONO SF.png" alt="BOOMBOX Icono" class="w-24 mx-auto mb-4">
+            <img src="BOOMBOX SF.png" alt="BOOMBOX" class="h-12 mx-auto mb-6">
 
             <div id="loginForm">
                 <h2 class="text-lg font-bold text-gray-700 mb-4">Iniciar Sesión</h2>
                 <input type="text" id="loginUser" placeholder="Usuario" class="w-full mb-3 p-3 border rounded-lg focus:ring-2 focus:ring-orange-500">
                 <input type="password" id="loginPass" placeholder="Contraseña" class="w-full mb-4 p-3 border rounded-lg focus:ring-2 focus:ring-orange-500">
-                <button onclick="iniciarSesion()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg transition">Entrar</button>
+                <button type="button" onclick="iniciarSesion()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg transition">Entrar</button>
                 <p class="mt-4 text-sm text-gray-500">¿Nuevo negocio? <span onclick="toggleAuth()" class="text-orange-500 cursor-pointer font-bold">Regístrate aquí</span></p>
             </div>
 
             <div id="registerForm" class="hidden">
                 <h2 class="text-lg font-bold text-gray-700 mb-4">Registrar Negocio</h2>
-                <input type="text" id="regEmpresa" placeholder="Nombre del Negocio (Ej. DISTRIBUIDORES2HERMANOS)" class="w-full mb-3 p-3 border rounded-lg text-sm">
-                <input type="text" id="regZona" placeholder="Zona Principal (Ej. Toluca)" class="w-full mb-3 p-3 border rounded-lg text-sm">
+                <input type="text" id="regEmpresa" placeholder="Nombre del Negocio" class="w-full mb-3 p-3 border rounded-lg text-sm">
+                <input type="text" id="regZona" placeholder="Zona Principal" class="w-full mb-3 p-3 border rounded-lg text-sm">
                 <input type="text" id="regUser" placeholder="Tu Usuario (Dueño)" class="w-full mb-3 p-3 border rounded-lg text-sm">
                 <input type="password" id="regPass" placeholder="Crear Contraseña" class="w-full mb-4 p-3 border rounded-lg text-sm">
-                <button onclick="registrarNegocio()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Crear Cuenta Principal</button>
+                <button type="button" onclick="registrarNegocio()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Crear Cuenta Principal</button>
                 <p class="mt-4 text-sm text-gray-500">¿Ya tienes cuenta? <span onclick="toggleAuth()" class="text-blue-600 cursor-pointer font-bold">Inicia sesión</span></p>
             </div>
         </div>
@@ -40,27 +42,24 @@
     <div id="appScreen" class="hidden min-h-screen">
         
         <nav class="bg-white shadow-md p-4 flex justify-between items-center relative z-10">
-            <div class="flex items-center gap-3">
-                <img src="BOOMBOX.png" alt="BOOMBOX Logo" class="w-10 h-10" onerror="this.style.display='none'">
-               <div class="flex items-center gap-2">
-    <img src="ICONO SF.png" alt="BOOMBOX Icono" class="w-10 h-10">
-    <img src="BOOMBOX SF.png" alt="BOOMBOX" class="h-7">
-</div>
+            <div class="flex items-center gap-2">
+                <img src="ICONO SF.png" alt="BOOMBOX Icono" class="w-10 h-10">
+                <img src="BOOMBOX SF.png" alt="BOOMBOX" class="h-7">
             </div>
             <div class="flex items-center gap-4">
                 <div class="text-right">
                     <p class="font-bold text-gray-800" id="displayEmpresa">Negocio</p>
                     <p class="text-xs text-gray-500" id="displayUser">Usuario (Rol)</p>
                 </div>
-                <button onclick="cerrarSesion()" class="text-red-500 font-bold text-sm hover:underline">Cerrar Sesión</button>
+                <button type="button" onclick="cerrarSesion()" class="text-red-500 font-bold text-sm hover:underline">Cerrar Sesión</button>
             </div>
         </nav>
 
         <div class="bg-white border-b flex justify-center gap-8 text-sm font-semibold text-gray-600">
-            <button onclick="cambiarPestaña('tab-ventas')" id="btn-tab-ventas" class="py-4 px-2 hover:text-orange-500 tab-active">Ventas Mostrador</button>
-            <button onclick="cambiarPestaña('tab-general')" id="btn-tab-general" class="py-4 px-2 hover:text-orange-500">Inventario General</button>
-            <button onclick="cambiarPestaña('tab-registro')" id="btn-tab-registro" class="py-4 px-2 hover:text-orange-500 hidden">Ingreso de Bodega</button>
-            <button onclick="cambiarPestaña('tab-usuarios')" id="btn-tab-usuarios" class="py-4 px-2 hover:text-orange-500 hidden">Gestión de Usuarios</button>
+            <button type="button" onclick="cambiarPestaña('tab-ventas')" id="btn-tab-ventas" class="py-4 px-2 hover:text-orange-500 tab-active">Ventas Mostrador</button>
+            <button type="button" onclick="cambiarPestaña('tab-general')" id="btn-tab-general" class="py-4 px-2 hover:text-orange-500">Inventario General</button>
+            <button type="button" onclick="cambiarPestaña('tab-registro')" id="btn-tab-registro" class="py-4 px-2 hover:text-orange-500 hidden">Ingreso de Bodega</button>
+            <button type="button" onclick="cambiarPestaña('tab-usuarios')" id="btn-tab-usuarios" class="py-4 px-2 hover:text-orange-500 hidden">Gestión de Usuarios</button>
         </div>
 
         <div class="max-w-6xl mx-auto p-6 mt-4">
@@ -68,16 +67,35 @@
             <div class="bg-white p-4 rounded-lg shadow-sm mb-6 flex items-center gap-4 border-l-4 border-orange-500">
                 <label class="font-bold text-gray-700">Zona actual de trabajo:</label>
                 <select id="zonaSelect" onchange="cargarInventarioGeneral()" class="p-2 border rounded bg-gray-50 focus:ring-2 focus:ring-orange-500"></select>
-                <button id="btnAgregarZona" onclick="agregarNuevaZona()" class="text-sm bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded hidden">+ Nueva Zona</button>
+                <button type="button" id="btnAgregarZona" onclick="agregarNuevaZona()" class="text-sm bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded hidden">+ Nueva Zona</button>
             </div>
 
             <div id="tab-ventas" class="tab-content block">
                 <div class="bg-white p-6 rounded-lg shadow-md">
                     <h2 class="text-xl font-bold mb-4 flex items-center gap-2">🛒 Punto de Venta</h2>
-                    <p class="text-gray-500 mb-4">Busca un producto por SKU para registrar la venta y descontarlo del inventario.</p>
-                    <div class="flex gap-4">
-                        <input type="text" id="venta_sku" placeholder="Escanea o escribe el SKU" class="p-3 border rounded w-full md:w-1/3">
-                        <button onclick="registrarVenta()" class="bg-orange-500 text-white font-bold py-3 px-6 rounded hover:bg-orange-600">Vender 1 Unidad</button>
+                    <p class="text-gray-500 mb-4">Escanea o ingresa el SKU del producto para buscarlo en el inventario.</p>
+                    
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="venta_sku" placeholder="Escanea o escribe el SKU" class="p-3 border rounded w-full md:w-1/2 focus:ring-2 focus:ring-orange-500">
+                        <button type="button" onclick="buscarProductoParaVenta()" class="bg-blue-600 text-white font-bold py-3 px-4 rounded hover:bg-blue-700 transition">🔍 Buscar</button>
+                        <button type="button" onclick="activarCamara()" class="bg-gray-800 text-white font-bold py-3 px-4 rounded hover:bg-gray-900 transition flex items-center gap-2">
+                            📷 <span class="hidden md:inline">Escanear</span>
+                        </button>
+                    </div>
+
+                    <div id="reader" class="w-full md:w-1/2 mb-4"></div>
+
+                    <div id="infoProductoVenta" class="hidden bg-orange-50 p-5 rounded-lg border border-orange-200 mt-4">
+                        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                            <div class="text-center md:text-left">
+                                <h3 id="vp_nombre" class="text-2xl font-black text-gray-800 uppercase">Producto</h3>
+                                <p class="text-gray-600">SKU: <span id="vp_sku" class="font-bold"></span> | Stock disponible: <span id="vp_stock" class="font-bold text-orange-600"></span></p>
+                                <p class="text-3xl font-bold text-green-600 mt-2">$<span id="vp_precio"></span></p>
+                            </div>
+                            <button type="button" onclick="registrarVenta()" class="bg-orange-500 text-white text-lg font-bold py-4 px-8 rounded-lg shadow-lg hover:bg-orange-600 w-full md:w-auto transition transform hover:scale-105">
+                                ✅ Confirmar Venta
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -85,7 +103,7 @@
             <div id="tab-general" class="tab-content hidden">
                 <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
                     <h2 class="text-xl font-bold mb-4 flex items-center gap-2">📊 Inventario General</h2>
-                    <button onclick="cargarInventarioGeneral()" class="mb-4 text-sm text-blue-600 underline">↻ Actualizar Tabla</button>
+                    <button type="button" onclick="cargarInventarioGeneral()" class="mb-4 text-sm text-blue-600 underline">↻ Actualizar Tabla</button>
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-gray-100 text-gray-700">
@@ -107,7 +125,7 @@
             <div id="tab-registro" class="tab-content hidden">
                 <div class="bg-white p-6 rounded-lg shadow-md mb-8 border-t-4 border-green-500">
                     <h2 class="text-xl font-bold mb-4 flex items-center gap-2">📦 Ingresar Producto a Bodega</h2>
-                    <p class="text-xs text-gray-500 mb-4">Al guardar, se registrará automáticamente en la bitácora de auditoría con fecha y usuario.</p>
+                    <p class="text-xs text-gray-500 mb-4">Al guardar, se registrará en la bitácora de auditoría con fecha y usuario.</p>
                     <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
                         <input type="text" id="p_sku" placeholder="SKU" class="p-3 border rounded focus:ring-2 focus:ring-green-500">
                         <input type="text" id="p_nom" placeholder="Nombre del Producto" class="p-3 border rounded focus:ring-2 focus:ring-green-500 md:col-span-2">
@@ -115,7 +133,7 @@
                         <input type="number" id="p_pre" placeholder="Precio Venta ($)" class="p-3 border rounded focus:ring-2 focus:ring-green-500">
                         <input type="number" id="p_stk" placeholder="Piezas Ingresadas" class="p-3 border rounded focus:ring-2 focus:ring-green-500">
                     </div>
-                    <button onclick="guardarProducto()" class="mt-4 w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded shadow transition">Guardar y Auditar</button>
+                    <button type="button" onclick="guardarProducto()" class="mt-4 w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded shadow transition">Guardar y Auditar</button>
                     
                     <div id="mensajeExito" class="hidden mt-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded">
                         <p class="font-bold">¡Guardado en base de datos y bitácora!</p>
@@ -134,7 +152,7 @@
                             <option value="Vendedor">Vendedor (Solo Ventas)</option>
                             <option value="Gerente">Gerente (Edita y Registra)</option>
                         </select>
-                        <button onclick="crearUsuarioSecundario()" class="bg-blue-600 text-white font-bold p-3 rounded hover:bg-blue-700">Crear Acceso</button>
+                        <button type="button" onclick="crearUsuarioSecundario()" class="bg-blue-600 text-white font-bold p-3 rounded hover:bg-blue-700">Crear Acceso</button>
                     </div>
                 </div>
             </div>
@@ -146,7 +164,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // CONFIGURACIÓN DE FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyDXXqcuMvdYZdrwMkw95KwiJ_UD_CIyD8g",
             authDomain: "mi-negocio-d1931.firebaseapp.com",
@@ -159,30 +176,23 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        window.db = db; // Exponer para funciones globales
+        window.db = db;
 
-        // ----------------------------------------
-        // SISTEMA DE PESTAÑAS Y UI
-        // ----------------------------------------
+        // UI
         window.toggleAuth = () => {
             document.getElementById('loginForm').classList.toggle('hidden');
             document.getElementById('registerForm').classList.toggle('hidden');
         };
 
         window.cambiarPestaña = (idTab) => {
-            // Ocultar todas
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('button[id^="btn-tab-"]').forEach(btn => btn.classList.remove('tab-active'));
-            // Mostrar seleccionada
             document.getElementById(idTab).classList.remove('hidden');
             document.getElementById('btn-' + idTab).classList.add('tab-active');
-            
             if(idTab === 'tab-general') window.cargarInventarioGeneral();
         };
 
-        // ----------------------------------------
-        // AUTH & ROLES (Dueño, Gerente, Vendedor)
-        // ----------------------------------------
+        // AUTH
         window.registrarNegocio = async () => {
             const empresa = document.getElementById('regEmpresa').value.trim().toUpperCase();
             const zona = document.getElementById('regZona').value.trim();
@@ -196,7 +206,7 @@
                     empresaId: empresa.replace(/\s+/g, ''),
                     pass: pass,
                     zonas: [zona],
-                    rol: "Dueño" // El creador siempre es el Dueño
+                    rol: "Dueño"
                 });
                 alert("¡Negocio creado! Por favor inicia sesión.");
                 toggleAuth();
@@ -217,7 +227,7 @@
                     localStorage.setItem('currentUser', user);
                     localStorage.setItem('empresaId', datos.empresaId);
                     localStorage.setItem('zonas', JSON.stringify(datos.zonas));
-                    localStorage.setItem('userRol', datos.rol || "Vendedor"); // Rol seguro
+                    localStorage.setItem('userRol', datos.rol || "Vendedor");
                     iniciarApp();
                 } else {
                     alert("⚠️ Credenciales incorrectas.");
@@ -229,9 +239,7 @@
 
         window.cerrarSesion = () => { localStorage.clear(); location.reload(); };
 
-        // ----------------------------------------
-        // INICIALIZACIÓN Y PERMISOS (RBAC)
-        // ----------------------------------------
+        // PERMISOS
         function iniciarApp() {
             document.getElementById('authScreen').classList.add('hidden');
             document.getElementById('appScreen').classList.remove('hidden');
@@ -244,12 +252,10 @@
             document.getElementById('displayEmpresa').innerText = empresa;
             document.getElementById('displayUser').innerText = `${user} (${rol})`;
 
-            // Llenar selector de zonas
             const selectZona = document.getElementById('zonaSelect');
             selectZona.innerHTML = "";
             zonas.forEach(z => selectZona.add(new Option(z, z)));
 
-            // Aplicar Permisos
             const esDueno = rol === 'Dueño';
             const esPoderoso = rol === 'Dueño' || rol === 'Gerente';
 
@@ -260,16 +266,14 @@
             if (esDueno) {
                 document.getElementById('btn-tab-usuarios').classList.remove('hidden');
             }
-            if (!esPoderoso) { // Es vendedor: ocultar columnas de costo
+            if (!esPoderoso) {
                 document.querySelectorAll('.costo-col').forEach(el => el.classList.add('hidden'));
             }
 
             window.cargarInventarioGeneral();
         }
 
-        // ----------------------------------------
-        // FUNCIONES DE DUEÑO (Crear Usuarios)
-        // ----------------------------------------
+        // DUEÑO
         window.crearUsuarioSecundario = async () => {
             const u = document.getElementById('new_user').value.trim();
             const p = document.getElementById('new_pass').value.trim();
@@ -303,9 +307,7 @@
             }
         };
 
-        // ----------------------------------------
-        // INVENTARIO: GUARDAR, AUDITAR Y LEER
-        // ----------------------------------------
+        // INVENTARIO
         window.guardarProducto = async () => {
             const sku = document.getElementById('p_sku').value.trim();
             const nom = document.getElementById('p_nom').value.trim();
@@ -319,10 +321,7 @@
             if(!sku || isNaN(stk) || isNaN(cos) || isNaN(pre)) return alert("⚠️ Revisa que no falten datos ni costos.");
 
             try {
-                // 1. Guardar en Bodega Actual
                 const rutaBodega = `${empresa}_Inventario_${zona}`;
-                
-                // Obtenemos el stock actual para sumarlo (si existe)
                 const docSnap = await getDoc(doc(db, rutaBodega, sku));
                 let stockFinal = stk;
                 if (docSnap.exists()) stockFinal += docSnap.data().stock;
@@ -331,26 +330,18 @@
                     sku, nombre: nom, costo: cos, precio: pre, stock: stockFinal, zona
                 });
 
-                // 2. Guardar en BITÁCORA DE AUDITORÍA (Historial)
                 const ahora = new Date();
                 await addDoc(collection(db, `${empresa}_Historial_Ingresos`), {
-                    sku: sku,
-                    nombre: nom,
-                    costo: cos,
-                    precioVenta: pre,
-                    piezas_ingresadas: stk,
-                    zona: zona,
-                    usuario: usuarioActivo,
+                    sku: sku, nombre: nom, costo: cos, precioVenta: pre,
+                    piezas_ingresadas: stk, zona: zona, usuario: usuarioActivo,
                     fecha: ahora.toLocaleDateString('es-MX'),
                     hora: ahora.toLocaleTimeString('es-MX'),
                     timestamp: ahora.toISOString()
                 });
 
-                // Éxito
                 document.getElementById('mensajeExito').classList.remove('hidden');
                 setTimeout(() => document.getElementById('mensajeExito').classList.add('hidden'), 3000);
                 ['p_sku', 'p_nom', 'p_cos', 'p_pre', 'p_stk'].forEach(id => document.getElementById(id).value = '');
-
             } catch (error) {
                 console.error(error);
                 alert("Error al subir a Firebase.");
@@ -391,15 +382,50 @@
             }
         };
 
-        // ----------------------------------------
-        // VENTAS MOSTRADOR
-        // ----------------------------------------
-        window.registrarVenta = async () => {
+        // VENTAS Y ESCÁNER
+        window.activarCamara = () => {
+            if (window.escanerActivo) window.escanerActivo.clear();
+
+            window.escanerActivo = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} });
+            window.escanerActivo.render((textoEscaneado) => {
+                document.getElementById('venta_sku').value = textoEscaneado;
+                window.escanerActivo.clear();
+                document.getElementById('reader').innerHTML = '';
+                window.buscarProductoParaVenta();
+            });
+        };
+
+        window.buscarProductoParaVenta = async () => {
             const sku = document.getElementById('venta_sku').value.trim();
             const zona = document.getElementById('zonaSelect').value;
             const empresa = localStorage.getItem('empresaId');
 
-            if(!sku) return alert("Ingresa un SKU");
+            if(!sku) return alert("Ingresa o escanea un SKU primero.");
+
+            try {
+                const docSnap = await getDoc(doc(db, `${empresa}_Inventario_${zona}`, sku));
+
+                if (docSnap.exists()) {
+                    const prod = docSnap.data();
+                    document.getElementById('vp_nombre').innerText = prod.nombre;
+                    document.getElementById('vp_sku').innerText = prod.sku;
+                    document.getElementById('vp_stock').innerText = prod.stock;
+                    document.getElementById('vp_precio').innerText = prod.precio;
+                    
+                    document.getElementById('infoProductoVenta').classList.remove('hidden');
+
+                    if (prod.stock <= 0) alert("⚠️ Precaución: Producto agotado en sucursal.");
+                } else {
+                    document.getElementById('infoProductoVenta').classList.add('hidden');
+                    alert("❌ Producto no encontrado en esta zona.");
+                }
+            } catch(error) { alert("Error al buscar el producto."); }
+        };
+
+        window.registrarVenta = async () => {
+            const sku = document.getElementById('vp_sku').innerText; 
+            const zona = document.getElementById('zonaSelect').value;
+            const empresa = localStorage.getItem('empresaId');
 
             try {
                 const docRef = doc(db, `${empresa}_Inventario_${zona}`, sku);
@@ -409,16 +435,14 @@
                     let stockActual = docSnap.data().stock;
                     if(stockActual > 0) {
                         await setDoc(docRef, { stock: stockActual - 1 }, { merge: true });
-                        alert(`✅ Venta Registrada. Stock restante: ${stockActual - 1}`);
+                        alert(`✅ Venta exitosa. Quedan ${stockActual - 1} piezas.`);
                         document.getElementById('venta_sku').value = '';
-                        if(!document.getElementById('tab-general').classList.contains('hidden')) cargarInventarioGeneral();
+                        document.getElementById('infoProductoVenta').classList.add('hidden');
                     } else {
-                        alert("⚠️ Producto sin Stock.");
+                        alert("⚠️ No puedes vender, stock insuficiente.");
                     }
-                } else {
-                    alert("❌ SKU no encontrado en esta zona.");
                 }
-            } catch(e) { alert("Error al procesar venta"); }
+            } catch(e) { alert("Error de red al procesar venta."); }
         };
 
         window.onload = () => { if(localStorage.getItem('currentUser')) iniciarApp(); };
