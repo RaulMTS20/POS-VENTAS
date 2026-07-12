@@ -3,132 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BOOMBOX - POS & Inventario</title>
-    
-    <link rel="icon" type="image/png" href="ICONO SF.png">
-    
+    <title>BOOMBOX - POS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    
-    <style>
-        .brand-text { color: #f59e0b; }
-        .tab-active { border-bottom: 4px solid #f59e0b; color: #f59e0b; font-weight: bold; }
-        /* Ajustes para el lector */
-        #reader { width: 100%; max-width: 400px; margin: 0 auto; }
-        #reader video { width: 100%; border-radius: 8px; }
-    </style>
 </head>
-<body class="bg-slate-50 text-gray-800 font-sans">
+<body class="bg-slate-100 font-sans">
 
-    <div id="authScreen" class="min-h-screen flex items-center justify-center bg-gray-900 px-4">
-        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md text-center">
-            <div class="flex justify-center mb-8">
-                <img src="BOOMBOX SF.png" alt="BOOMBOX Logo" class="w-80 h-auto object-contain">
+    <div id="app" class="max-w-md mx-auto mt-10 p-4 bg-white shadow-xl rounded-2xl">
+        <img src="BOOMBOX SF.png" class="w-40 mx-auto mb-6">
+        
+        <h2 class="text-xl font-bold mb-4 text-center">Punto de Venta</h2>
+
+        <div class="mb-6">
+            <label class="block text-sm font-bold text-gray-600 mb-2">Ingresa el SKU manualmente:</label>
+            <div class="flex gap-2">
+                <input type="text" id="venta_sku" placeholder="Ej. 750100..." class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500">
+                <button onclick="buscarProducto()" class="bg-blue-600 text-white px-4 rounded-lg font-bold">Buscar</button>
             </div>
-            <div id="loginForm">
-                <h2 class="text-lg font-bold text-gray-700 mb-4">Iniciar Sesión</h2>
-                <input type="text" id="loginUser" placeholder="Usuario" class="w-full mb-3 p-3 border rounded-lg focus:ring-2 focus:ring-orange-500">
-                <input type="password" id="loginPass" placeholder="Contraseña" class="w-full mb-4 p-3 border rounded-lg focus:ring-2 focus:ring-orange-500">
-                <button type="button" onclick="iniciarSesion()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg transition">Entrar</button>
-            </div>
-            <div id="registerForm" class="hidden">
-                <h2 class="text-lg font-bold text-gray-700 mb-4">Registrar Negocio</h2>
-                <input type="text" id="regEmpresa" placeholder="Nombre del Negocio" class="w-full mb-3 p-3 border rounded-lg text-sm">
-                <input type="text" id="regZona" placeholder="Zona Principal" class="w-full mb-3 p-3 border rounded-lg text-sm">
-                <input type="text" id="regUser" placeholder="Tu Usuario" class="w-full mb-3 p-3 border rounded-lg text-sm">
-                <input type="password" id="regPass" placeholder="Crear Contraseña" class="w-full mb-4 p-3 border rounded-lg text-sm">
-                <button type="button" onclick="registrarNegocio()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Crear Cuenta</button>
-                <p class="mt-4 text-sm text-gray-500 cursor-pointer" onclick="toggleAuth()">¿Ya tienes cuenta? Inicia sesión</p>
-            </div>
+        </div>
+
+        <div class="text-center my-4 font-bold text-gray-400">--- O ---</div>
+
+        <div class="mb-6">
+            <button id="btn-iniciar" onclick="iniciarCamara()" class="w-full bg-black text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2">
+                📷 Escanear Código de Barras
+            </button>
+            <button id="btn-detener" onclick="detenerCamara()" class="hidden w-full bg-red-600 text-white py-3 rounded-lg font-bold mt-2">
+                ❌ Cancelar Escaneo
+            </button>
+        </div>
+
+        <div id="reader" class="hidden w-full overflow-hidden rounded-lg border-2 border-gray-200"></div>
+
+        <div id="resultado" class="hidden mt-6 p-4 bg-orange-50 rounded-lg text-center">
+            <p id="prod_nombre" class="font-bold text-lg"></p>
+            <p id="prod_precio" class="text-green-600 font-bold text-xl"></p>
         </div>
     </div>
 
-    <div id="appScreen" class="hidden min-h-screen">
-        <nav class="bg-white shadow-md p-4 flex justify-between items-center">
-            <img src="BOOMBOX SF.png" alt="BOOMBOX" class="h-8">
-            <button type="button" onclick="cerrarSesion()" class="text-red-500 font-bold text-sm">Salir</button>
-        </nav>
-
-        <div class="bg-white border-b flex justify-center gap-8 text-sm font-semibold text-gray-600">
-            <button type="button" onclick="cambiarPestaña('tab-ventas')" id="btn-tab-ventas" class="py-4 px-2 tab-active">Ventas</button>
-            <button type="button" onclick="cambiarPestaña('tab-general')" id="btn-tab-general" class="py-4 px-2">Inventario</button>
-            <button type="button" onclick="cambiarPestaña('tab-registro')" id="btn-tab-registro" class="py-4 px-2 hidden">Ingreso</button>
-        </div>
-
-        <div class="max-w-6xl mx-auto p-6">
-            <div id="tab-ventas" class="tab-content block">
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h2 class="text-xl font-bold mb-4">🛒 Punto de Venta</h2>
-                    
-                    <div class="flex gap-2 mb-4">
-                        <input type="text" id="venta_sku" placeholder="SKU" class="p-3 border rounded w-full focus:ring-2 focus:ring-orange-500">
-                        <button type="button" onclick="buscarProductoParaVenta()" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg">Buscar</button>
-                    </div>
-
-                    <button type="button" onclick="iniciarEscaneo()" class="w-full bg-gray-800 text-white font-bold py-4 rounded-lg mb-4 hover:bg-black transition">
-                        📷 Escanear con Cámara
-                    </button>
-                    
-                    <div id="reader"></div>
-
-                    <div id="infoProductoVenta" class="hidden bg-orange-50 p-5 rounded-lg border border-orange-200 mt-4">
-                        <h3 id="vp_nombre" class="text-2xl font-black uppercase text-gray-800">Producto</h3>
-                        <p class="text-lg">Stock: <span id="vp_stock" class="font-bold"></span> | Precio: $<span id="vp_precio" class="font-bold text-green-600"></span></p>
-                        <button type="button" onclick="registrarVenta()" class="mt-4 w-full bg-orange-500 text-white font-bold py-3 rounded-lg">✅ Confirmar Venta</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="tab-general" class="tab-content hidden">
-                <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
-                    <table class="w-full text-left">
-                        <thead><tr class="bg-gray-100"><th class="p-3">SKU</th><th class="p-3">Producto</th><th class="p-3">Stock</th></tr></thead>
-                        <tbody id="tablaInventarioGeneralBody"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="tab-registro" class="tab-content hidden">
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h2 class="text-xl font-bold mb-4">📦 Ingreso Manual</h2>
-                    <input type="text" id="p_sku" placeholder="SKU" class="w-full mb-3 p-3 border rounded">
-                    <input type="text" id="p_nom" placeholder="Nombre" class="w-full mb-3 p-3 border rounded">
-                    <input type="number" id="p_stk" placeholder="Cantidad" class="w-full mb-3 p-3 border rounded">
-                    <button type="button" onclick="guardarProducto()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg">Guardar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        // ... [Configuración de Firebase igual a la anterior] ...
-        const firebaseConfig = { apiKey: "AIzaSyDXXqcuMvdYZdrwMkw95KwiJ_UD_CIyD8g", projectId: "mi-negocio-d1931", storageBucket: "mi-negocio-d1931.firebasestorage.app", appId: "1:543739671500:web:b6abfebbcd6494370f2369" };
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // ESCÁNER REAL
+    <script>
         let html5QrCode;
-        window.iniciarEscaneo = () => {
-            document.getElementById('reader').classList.remove('hidden');
-            html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start(
-                { facingMode: "environment" }, 
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                (decodedText) => {
-                    document.getElementById('venta_sku').value = decodedText;
-                    html5QrCode.stop().then(() => {
-                        document.getElementById('reader').classList.add('hidden');
-                        buscarProductoParaVenta();
-                    });
-                }
-            ).catch(err => alert("Error al acceder a la cámara."));
-        };
 
-        // --- Resto de las funciones (iniciarSesion, buscarProducto, registrarVenta) se mantienen iguales ---
-        // ... (Mantén aquí el resto de tu lógica de Firestore que ya tenías) ...
+        // --- FUNCIÓN PARA INICIAR CÁMARA ---
+        function iniciarCamara() {
+            document.getElementById('reader').classList.remove('hidden');
+            document.getElementById('btn-iniciar').classList.add('hidden');
+            document.getElementById('btn-detener').classList.remove('hidden');
+
+            html5QrCode = new Html5QrCode("reader");
+            html5QrCode.start(
+                { facingMode: "environment" }, // Cámara trasera
+                { fps: 10, qrbox: { width: 250, height: 150 } },
+                (decodedText) => {
+                    // Cuando detecta el código
+                    document.getElementById('venta_sku').value = decodedText;
+                    detenerCamara(); // Cerrar cámara automáticamente al leer
+                    buscarProducto(); // Buscar el producto leído
+                },
+                (errorMessage) => { /* Silencioso para no saturar al usuario */ }
+            ).catch(err => {
+                alert("No se pudo acceder a la cámara. Revisa los permisos.");
+            });
+        }
+
+        // --- FUNCIÓN PARA DETENER CÁMARA ---
+        function detenerCamara() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('reader').classList.add('hidden');
+                    document.getElementById('btn-iniciar').classList.remove('hidden');
+                    document.getElementById('btn-detener').classList.add('hidden');
+                }).catch(err => console.log("Error deteniendo"));
+            }
+        }
+
+        // --- LÓGICA DE BÚSQUEDA ---
+        function buscarProducto() {
+            const sku = document.getElementById('venta_sku').value;
+            if(!sku) return alert("Escribe un SKU o escanea un código.");
+            
+            // Aquí iría tu lógica de Firebase para buscar el producto
+            // Ejemplo visual:
+            document.getElementById('resultado').classList.remove('hidden');
+            document.getElementById('prod_nombre').innerText = "Producto detectado: " + sku;
+            document.getElementById('prod_precio').innerText = "$ 0.00";
+        }
     </script>
 </body>
 </html>
