@@ -19,8 +19,7 @@
     <div id="authScreen" class="min-h-screen flex items-center justify-center bg-gray-900">
         <div class="bg-white p-8 rounded-xl shadow-2xl w-96 text-center">
             
-            <img src="ICONO SF.png" alt="BOOMBOX Icono" class="w-24 mx-auto mb-4">
-            <img src="BOOMBOX SF.png" alt="BOOMBOX" class="h-12 mx-auto mb-6">
+            <img src="BOOMBOX SF.png" alt="BOOMBOX Logo Principal" class="w-64 mx-auto mb-8">
 
             <div id="loginForm">
                 <h2 class="text-lg font-bold text-gray-700 mb-4">Iniciar Sesión</h2>
@@ -314,4 +313,140 @@
             const sku = document.getElementById('p_sku').value.trim();
             const nom = document.getElementById('p_nom').value.trim();
             const cos = parseFloat(document.getElementById('p_cos').value);
-            const pre =
+            const pre = parseFloat(document.getElementById('p_pre').value);
+            const stk = parseInt(document.getElementById('p_stk').value);
+            const zona = document.getElementById('zonaSelect').value;
+            const empresa = localStorage.getItem('empresaId');
+            const usuarioActivo = localStorage.getItem('currentUser');
+
+            if(!sku || isNaN(stk) || isNaN(cos) || isNaN(pre)) return alert("⚠️ Revisa que no falten datos ni costos.");
+
+            try {
+                const rutaBodega = `${empresa}_Inventario_${zona}`;
+                const docSnap = await getDoc(doc(db, rutaBodega, sku));
+                let stockFinal = stk;
+                if (docSnap.exists()) stockFinal += docSnap.data().stock;
+
+                await setDoc(doc(db, rutaBodega, sku), {
+                    sku, nombre: nom, costo: cos, precio: pre, stock: stockFinal, zona
+                });
+
+                const ahora = new Date();
+                await addDoc(collection(db, `${empresa}_Historial_Ingresos`), {
+                    sku: sku, nombre: nom, costo: cos, precioVenta: pre,
+                    piezas_ingresadas: stk, zona: zona, usuario: usuarioActivo,
+                    fecha: ahora.toLocaleDateString('es-MX'),
+                    hora: ahora.toLocaleTimeString('es-MX'),
+                    timestamp: ahora.toISOString()
+                });
+
+                document.getElementById('mensajeExito').classList.remove('hidden');
+                setTimeout(() => document.getElementById('mensajeExito').classList.add('hidden'), 3000);
+                ['p_sku', 'p_nom', 'p_cos', 'p_pre', 'p_stk'].forEach(id => document.getElementById(id).value = '');
+            } catch (error) {
+                console.error(error);
+                alert("Error al subir a Firebase.");
+            }
+        };
+
+        window.cargarInventarioGeneral = async () => {
+            const zonas = JSON.parse(localStorage.getItem('zonas') || "[]");
+            const empresa = localStorage.getItem('empresaId');
+            const rol = localStorage.getItem('userRol');
+            const tbody = document.getElementById('tablaInventarioGeneralBody');
+            
+            tbody.innerHTML = "<tr><td colspan='6' class='p-4 text-center'>Cargando base de datos...</td></tr>";
+            let html = "";
+
+            try {
+                for (const z of zonas) {
+                    const snapshot = await getDocs(collection(db, `${empresa}_Inventario_${z}`));
+                    snapshot.forEach((doc) => {
+                        const p = doc.data();
+                        const colCosto = (rol === 'Dueño' || rol === 'Gerente') ? `<td class="p-3">$${p.costo}</td>` : ``;
+                        
+                        html += `
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="p-3 font-bold text-orange-600">${z}</td>
+                                <td class="p-3">${p.sku}</td>
+                                <td class="p-3">${p.nombre}</td>
+                                <td class="p-3 font-bold">${p.stock}</td>
+                                ${colCosto}
+                                <td class="p-3 text-green-600 font-bold">$${p.precio}</td>
+                            </tr>
+                        `;
+                    });
+                }
+                tbody.innerHTML = html || "<tr><td colspan='6' class='p-4 text-center'>Inventario vacío.</td></tr>";
+            } catch(e) {
+                tbody.innerHTML = "<tr><td colspan='6' class='p-4 text-center text-red-500'>Error al cargar.</td></tr>";
+            }
+        };
+
+        // VENTAS Y ESCÁNER
+        window.activarCamara = () => {
+            if (window.escanerActivo) window.escanerActivo.clear();
+
+            window.escanerActivo = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} });
+            window.escanerActivo.render((textoEscaneado) => {
+                document.getElementById('venta_sku').value = textoEscaneado;
+                window.escanerActivo.clear();
+                document.getElementById('reader').innerHTML = '';
+                window.buscarProductoParaVenta();
+            });
+        };
+
+        window.buscarProductoParaVenta = async () => {
+            const sku = document.getElementById('venta_sku').value.trim();
+            const zona = document.getElementById('zonaSelect').value;
+            const empresa = localStorage.getItem('empresaId');
+
+            if(!sku) return alert("Ingresa o escanea un SKU primero.");
+
+            try {
+                const docSnap = await getDoc(doc(db, `${empresa}_Inventario_${zona}`, sku));
+
+                if (docSnap.exists()) {
+                    const prod = docSnap.data();
+                    document.getElementById('vp_nombre').innerText = prod.nombre;
+                    document.getElementById('vp_sku').innerText = prod.sku;
+                    document.getElementById('vp_stock').innerText = prod.stock;
+                    document.getElementById('vp_precio').innerText = prod.precio;
+                    
+                    document.getElementById('infoProductoVenta').classList.remove('hidden');
+
+                    if (prod.stock <= 0) alert("⚠️ Precaución: Producto agotado en sucursal.");
+                } else {
+                    document.getElementById('infoProductoVenta').classList.add('hidden');
+                    alert("❌ Producto no encontrado en esta zona.");
+                }
+            } catch(error) { alert("Error al buscar el producto."); }
+        };
+
+        window.registrarVenta = async () => {
+            const sku = document.getElementById('vp_sku').innerText; 
+            const zona = document.getElementById('zonaSelect').value;
+            const empresa = localStorage.getItem('empresaId');
+
+            try {
+                const docRef = doc(db, `${empresa}_Inventario_${zona}`, sku);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    let stockActual = docSnap.data().stock;
+                    if(stockActual > 0) {
+                        await setDoc(docRef, { stock: stockActual - 1 }, { merge: true });
+                        alert(`✅ Venta exitosa. Quedan ${stockActual - 1} piezas.`);
+                        document.getElementById('venta_sku').value = '';
+                        document.getElementById('infoProductoVenta').classList.add('hidden');
+                    } else {
+                        alert("⚠️ No puedes vender, stock insuficiente.");
+                    }
+                }
+            } catch(e) { alert("Error de red al procesar venta."); }
+        };
+
+        window.onload = () => { if(localStorage.getItem('currentUser')) iniciarApp(); };
+    </script>
+</body>
+</html>
