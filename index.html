@@ -8,127 +8,580 @@
     <link rel="icon" type="image/png" href="ICONO SF.png">
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    
     <style>
         .brand-text { color: #f59e0b; }
         .tab-active { border-bottom: 4px solid #f59e0b; color: #f59e0b; font-weight: bold; }
-        /* Ajustes para el lector */
-        #reader { width: 100%; max-width: 400px; margin: 0 auto; }
-        #reader video { width: 100%; border-radius: 8px; }
+        #camera-video { width: 100%; max-width: 400px; transform: scaleX(1); }
     </style>
 </head>
 <body class="bg-slate-50 text-gray-800 font-sans">
 
     <div id="authScreen" class="min-h-screen flex items-center justify-center bg-gray-900 px-4">
         <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md text-center">
+            
             <div class="flex justify-center mb-8">
-                <img src="BOOMBOX SF.png" alt="BOOMBOX Logo" class="w-80 h-auto object-contain">
+                <img src="BOOMBOX SF.png" alt="BOOMBOX Logo Principal" class="w-80 md:w-96 h-auto object-contain">
             </div>
+
             <div id="loginForm">
                 <h2 class="text-lg font-bold text-gray-700 mb-4">Iniciar Sesión</h2>
                 <input type="text" id="loginUser" placeholder="Usuario" class="w-full mb-3 p-3 border rounded-lg focus:ring-2 focus:ring-orange-500">
                 <input type="password" id="loginPass" placeholder="Contraseña" class="w-full mb-4 p-3 border rounded-lg focus:ring-2 focus:ring-orange-500">
                 <button type="button" onclick="iniciarSesion()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg transition">Entrar</button>
+                <p class="mt-4 text-sm text-gray-500">¿Nuevo negocio? <span onclick="toggleAuth()" class="text-orange-500 cursor-pointer font-bold">Regístrate aquí</span></p>
             </div>
+
             <div id="registerForm" class="hidden">
                 <h2 class="text-lg font-bold text-gray-700 mb-4">Registrar Negocio</h2>
                 <input type="text" id="regEmpresa" placeholder="Nombre del Negocio" class="w-full mb-3 p-3 border rounded-lg text-sm">
                 <input type="text" id="regZona" placeholder="Zona Principal" class="w-full mb-3 p-3 border rounded-lg text-sm">
-                <input type="text" id="regUser" placeholder="Tu Usuario" class="w-full mb-3 p-3 border rounded-lg text-sm">
+                <input type="text" id="regUser" placeholder="Tu Usuario (Dueño)" class="w-full mb-3 p-3 border rounded-lg text-sm">
                 <input type="password" id="regPass" placeholder="Crear Contraseña" class="w-full mb-4 p-3 border rounded-lg text-sm">
-                <button type="button" onclick="registrarNegocio()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Crear Cuenta</button>
-                <p class="mt-4 text-sm text-gray-500 cursor-pointer" onclick="toggleAuth()">¿Ya tienes cuenta? Inicia sesión</p>
+                <button type="button" onclick="registrarNegocio()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Crear Cuenta Principal</button>
+                <p class="mt-4 text-sm text-gray-500">¿Ya tienes cuenta? <span onclick="toggleAuth()" class="text-blue-600 cursor-pointer font-bold">Inicia sesión</span></p>
             </div>
         </div>
     </div>
 
     <div id="appScreen" class="hidden min-h-screen">
-        <nav class="bg-white shadow-md p-4 flex justify-between items-center">
-            <img src="BOOMBOX SF.png" alt="BOOMBOX" class="h-8">
-            <button type="button" onclick="cerrarSesion()" class="text-red-500 font-bold text-sm">Salir</button>
+        
+        <nav class="bg-white shadow-md p-4 flex justify-between items-center relative z-10">
+            <div class="flex items-center">
+                <img src="BOOMBOX SF.png" alt="BOOMBOX" class="h-8">
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-right">
+                    <p class="font-bold text-gray-800" id="displayEmpresa">Negocio</p>
+                    <p class="text-xs text-gray-500" id="displayUser">Usuario (Rol)</p>
+                </div>
+                <button type="button" onclick="cerrarSesion()" class="text-red-500 font-bold text-sm hover:underline">Cerrar Sesión</button>
+            </div>
         </nav>
 
         <div class="bg-white border-b flex justify-center gap-8 text-sm font-semibold text-gray-600">
-            <button type="button" onclick="cambiarPestaña('tab-ventas')" id="btn-tab-ventas" class="py-4 px-2 tab-active">Ventas</button>
-            <button type="button" onclick="cambiarPestaña('tab-general')" id="btn-tab-general" class="py-4 px-2">Inventario</button>
-            <button type="button" onclick="cambiarPestaña('tab-registro')" id="btn-tab-registro" class="py-4 px-2 hidden">Ingreso</button>
+            <button type="button" onclick="cambiarPestaña('tab-ventas')" id="btn-tab-ventas" class="py-4 px-2 hover:text-orange-500 tab-active">Ventas Mostrador</button>
+            <button type="button" onclick="cambiarPestaña('tab-general')" id="btn-tab-general" class="py-4 px-2 hover:text-orange-500">Inventario General</button>
+            <button type="button" onclick="cambiarPestaña('tab-registro')" id="btn-tab-registro" class="py-4 px-2 hover:text-orange-500 hidden">Ingreso de Bodega</button>
+            <button type="button" onclick="cambiarPestaña('tab-usuarios')" id="btn-tab-usuarios" class="py-4 px-2 hover:text-orange-500 hidden">Gestión de Usuarios</button>
         </div>
 
-        <div class="max-w-6xl mx-auto p-6">
+        <div class="max-w-6xl mx-auto p-6 mt-4">
+
+            <div class="bg-white p-4 rounded-lg shadow-sm mb-6 flex items-center gap-4 border-l-4 border-orange-500">
+                <label class="font-bold text-gray-700">Zona actual de trabajo:</label>
+                <select id="zonaSelect" onchange="cargarInventarioGeneral()" class="p-2 border rounded bg-gray-50 focus:ring-2 focus:ring-orange-500"></select>
+                <button type="button" id="btnAgregarZona" onclick="agregarNuevaZona()" class="text-sm bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded hidden">+ Nueva Zona</button>
+            </div>
+
             <div id="tab-ventas" class="tab-content block">
                 <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h2 class="text-xl font-bold mb-4">🛒 Punto de Venta</h2>
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">🛒 Punto de Venta</h2>
+                    <p class="text-gray-500 mb-4">Escribe el SKU o presiona el botón para encender la cámara del celular.</p>
                     
-                    <div class="flex gap-2 mb-4">
-                        <input type="text" id="venta_sku" placeholder="SKU" class="p-3 border rounded w-full focus:ring-2 focus:ring-orange-500">
-                        <button type="button" onclick="buscarProductoParaVenta()" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg">Buscar</button>
+                    <div class="flex flex-col md:flex-row gap-2 mb-4">
+                        <input type="text" id="venta_sku" placeholder="Escribe el SKU aquí..." class="p-3 border rounded w-full md:w-1/2 focus:ring-2 focus:ring-orange-500 text-lg">
+                        <div class="flex gap-2 w-full md:w-auto">
+                            <button type="button" onclick="buscarProductoParaVenta()" class="w-full md:w-auto bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition">🔍 Buscar</button>
+                            <button type="button" onclick="alternarCamaraNativa()" id="btnCamaraNativa" class="w-full md:w-auto bg-gray-800 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-900 transition flex items-center justify-center gap-2">
+                                📷 <span>Encender Cámara</span>
+                            </button>
+                        </div>
                     </div>
 
-                    <button type="button" onclick="iniciarEscaneo()" class="w-full bg-gray-800 text-white font-bold py-4 rounded-lg mb-4 hover:bg-black transition">
-                        📷 Escanear con Cámara
-                    </button>
-                    
-                    <div id="reader"></div>
+                    <div id="contenedor-camara" class="hidden flex flex-col items-center bg-gray-100 p-4 rounded-lg border mb-4">
+                        <video id="camera-video" autoplay playsinline class="rounded-lg shadow bg-black"></video>
+                        <p class="text-xs text-gray-500 mt-2 text-center animate-pulse">Coloca el código frente a la cámara (simulación activa en navegador)</p>
+                        <button type="button" onclick="simularLecturaCamara()" class="mt-2 text-xs bg-gray-300 hover:bg-gray-400 text-gray-700 px-3 py-1 rounded">Capturar Código Manual</button>
+                    </div>
 
                     <div id="infoProductoVenta" class="hidden bg-orange-50 p-5 rounded-lg border border-orange-200 mt-4">
-                        <h3 id="vp_nombre" class="text-2xl font-black uppercase text-gray-800">Producto</h3>
-                        <p class="text-lg">Stock: <span id="vp_stock" class="font-bold"></span> | Precio: $<span id="vp_precio" class="font-bold text-green-600"></span></p>
-                        <button type="button" onclick="registrarVenta()" class="mt-4 w-full bg-orange-500 text-white font-bold py-3 rounded-lg">✅ Confirmar Venta</button>
+                        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                            <div class="text-center md:text-left">
+                                <h3 id="vp_nombre" class="text-2xl font-black text-gray-800 uppercase">Producto</h3>
+                                <p class="text-gray-600">SKU: <span id="vp_sku" class="font-bold"></span> | Stock disponible: <span id="vp_stock" class="font-bold text-orange-600"></span></p>
+                                <p class="text-3xl font-bold text-green-600 mt-2">$<span id="vp_precio"></span></p>
+                            </div>
+                            <button type="button" onclick="registrarVenta()" class="bg-orange-500 text-white text-lg font-bold py-4 px-8 rounded-lg shadow-lg hover:bg-orange-600 w-full md:w-auto transition transform hover:scale-105">
+                                ✅ Confirmar Venta
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div id="tab-general" class="tab-content hidden">
                 <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
-                    <table class="w-full text-left">
-                        <thead><tr class="bg-gray-100"><th class="p-3">SKU</th><th class="p-3">Producto</th><th class="p-3">Stock</th></tr></thead>
-                        <tbody id="tablaInventarioGeneralBody"></tbody>
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">📊 Inventario General</h2>
+                    <button type="button" onclick="cargarInventarioGeneral()" class="mb-4 text-sm text-blue-600 underline">↻ Actualizar Tabla</button>
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100 text-gray-700">
+                                <th class="p-3 border-b">Zona</th>
+                                <th class="p-3 border-b">SKU</th>
+                                <th class="p-3 border-b">Producto</th>
+                                <th class="p-3 border-b">Stock</th>
+                                <th class="p-3 border-b costo-col">Costo</th>
+                                <th class="p-3 border-b">Precio Venta</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaInventarioGeneralBody">
+                            <tr><td colspan="6" class="p-4 text-center text-gray-500">Cargando datos...</td></tr>
+                        </tbody>
                     </table>
                 </div>
             </div>
 
             <div id="tab-registro" class="tab-content hidden">
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h2 class="text-xl font-bold mb-4">📦 Ingreso Manual</h2>
-                    <input type="text" id="p_sku" placeholder="SKU" class="w-full mb-3 p-3 border rounded">
-                    <input type="text" id="p_nom" placeholder="Nombre" class="w-full mb-3 p-3 border rounded">
-                    <input type="number" id="p_stk" placeholder="Cantidad" class="w-full mb-3 p-3 border rounded">
-                    <button type="button" onclick="guardarProducto()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg">Guardar</button>
+                <div class="bg-white p-6 rounded-lg shadow-md mb-6 border-t-4 border-green-500">
+                    <h2 class="text-xl font-bold mb-2 flex items-center gap-2">📦 Ingresar Producto Individual</h2>
+                    <p class="text-xs text-gray-500 mb-4">Llenado manual uno por uno.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <input type="text" id="p_sku" placeholder="SKU" class="p-3 border rounded focus:ring-2 focus:ring-green-500">
+                        <input type="text" id="p_nom" placeholder="Nombre del Producto" class="p-3 border rounded focus:ring-2 focus:ring-green-500 md:col-span-2">
+                        <input type="number" id="p_cos" placeholder="Costo ($)" class="p-3 border rounded focus:ring-2 focus:ring-green-500">
+                        <input type="number" id="p_pre" placeholder="Precio Venta ($)" class="p-3 border rounded focus:ring-2 focus:ring-green-500">
+                        <input type="number" id="p_stk" placeholder="Piezas Ingresadas" class="p-3 border rounded focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <button type="button" onclick="guardarProducto()" class="mt-4 w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded shadow transition">Guardar y Auditar</button>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-amber-500">
+                    <h2 class="text-xl font-bold mb-2 flex items-center gap-2">📄 Carga Masiva de Inventario</h2>
+                    <p class="text-xs text-gray-500 mb-4">Sube un archivo .txt (separado por comas: SKU,Nombre,Costo,Precio,Stock) o un formato masivo .xml.</p>
+                    
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50 hover:bg-gray-100 transition relative">
+                        <input type="file" id="archivoInventario" accept=".txt,.xml" onchange="procesarArchivoMasivo()" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                        <div class="flex flex-col items-center justify-center">
+                            <span class="text-4xl mb-2">📁</span>
+                            <p class="text-sm font-medium text-gray-700">Haz clic aquí o arrastra tu archivo TXT o XML</p>
+                            <p class="text-xs text-gray-400 mt-1">Formatos admitidos: .txt o .xml</p>
+                        </div>
+                    </div>
+                    <div id="statusCargaMasiva" class="hidden mt-4 p-3 bg-blue-50 text-blue-700 text-sm rounded"></div>
                 </div>
             </div>
+
+            <div id="tab-usuarios" class="tab-content hidden">
+                <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-blue-500">
+                    <h2 class="text-xl font-bold mb-4">👥 Registrar Nuevo Colaborador</h2>
+                    <p class="text-gray-500 mb-4">Agrega vendedores o gerentes a tu negocio actual.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <input type="text" id="new_user" placeholder="Nombre de Usuario" class="p-3 border rounded focus:ring-2 focus:ring-blue-500">
+                        <input type="password" id="new_pass" placeholder="Contraseña" class="p-3 border rounded focus:ring-2 focus:ring-blue-500">
+                        <select id="new_role" class="p-3 border rounded focus:ring-2 focus:ring-blue-500">
+                            <option value="Vendedor">Vendedor (Solo Ventas)</option>
+                            <option value="Gerente">Gerente (Edita y Registra)</option>
+                        </select>
+                        <button type="button" onclick="crearUsuarioSecundario()" class="bg-blue-600 text-white font-bold p-3 rounded hover:bg-blue-700">Crear Acceso</button>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // ... [Configuración de Firebase igual a la anterior] ...
-        const firebaseConfig = { apiKey: "AIzaSyDXXqcuMvdYZdrwMkw95KwiJ_UD_CIyD8g", projectId: "mi-negocio-d1931", storageBucket: "mi-negocio-d1931.firebasestorage.app", appId: "1:543739671500:web:b6abfebbcd6494370f2369" };
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // ESCÁNER REAL
-        let html5QrCode;
-        window.iniciarEscaneo = () => {
-            document.getElementById('reader').classList.remove('hidden');
-            html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start(
-                { facingMode: "environment" }, 
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                (decodedText) => {
-                    document.getElementById('venta_sku').value = decodedText;
-                    html5QrCode.stop().then(() => {
-                        document.getElementById('reader').classList.add('hidden');
-                        buscarProductoParaVenta();
-                    });
-                }
-            ).catch(err => alert("Error al acceder a la cámara."));
+        const firebaseConfig = {
+            apiKey: "AIzaSyDXXqcuMvdYZdrwMkw95KwiJ_UD_CIyD8g",
+            authDomain: "mi-negocio-d1931.firebaseapp.com",
+            projectId: "mi-negocio-d1931",
+            storageBucket: "mi-negocio-d1931.firebasestorage.app",
+            messagingSenderId: "543739671500",
+            appId: "1:543739671500:web:b6abfebbcd6494370f2369",
+            measurementId: "G-EKFYTVXJ97"
         };
 
-        // --- Resto de las funciones (iniciarSesion, buscarProducto, registrarVenta) se mantienen iguales ---
-        // ... (Mantén aquí el resto de tu lógica de Firestore que ya tenías) ...
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        window.db = db;
+
+        // Variables de Control de Cámara Nativa
+        let streamCamara = null;
+
+        // UI PESTAÑAS
+        window.toggleAuth = () => {
+            document.getElementById('loginForm').classList.toggle('hidden');
+            document.getElementById('registerForm').classList.toggle('hidden');
+        };
+
+        window.cambiarPestaña = (idTab) => {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('button[id^="btn-tab-"]').forEach(btn => btn.classList.remove('tab-active'));
+            document.getElementById(idTab).classList.remove('hidden');
+            document.getElementById('btn-' + idTab).classList.add('tab-active');
+            
+            // Apagar la cámara si cambia de pestaña
+            if(idTab !== 'tab-ventas') apagarCamaraNativa();
+            if(idTab === 'tab-general') window.cargarInventarioGeneral();
+        };
+
+        // AUTHENTICATION
+        window.registrarNegocio = async () => {
+            const empresa = document.getElementById('regEmpresa').value.trim().toUpperCase();
+            const zona = document.getElementById('regZona').value.trim();
+            const user = document.getElementById('regUser').value.trim();
+            const pass = document.getElementById('regPass').value.trim();
+
+            if(!empresa || !zona || !user || !pass) return alert("⚠️ Llena todos los campos.");
+
+            try {
+                await setDoc(doc(db, "SaaS_Usuarios", user), {
+                    empresaId: empresa.replace(/\s+/g, ''),
+                    pass: pass,
+                    zonas: [zona],
+                    rol: "Dueño"
+                });
+                alert("¡Negocio creado! Por favor inicia sesión.");
+                toggleAuth();
+            } catch (error) {
+                alert("Error al conectar con Firebase.");
+            }
+        };
+
+        window.iniciarSesion = async () => {
+            const user = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
+            if(!user || !pass) return alert("⚠️ Faltan datos");
+
+            try {
+                const userDoc = await getDoc(doc(db, "SaaS_Usuarios", user));
+                if (userDoc.exists() && userDoc.data().pass === pass) {
+                    const datos = userDoc.data();
+                    localStorage.setItem('currentUser', user);
+                    localStorage.setItem('empresaId', datos.empresaId);
+                    localStorage.setItem('zonas', JSON.stringify(datos.zonas));
+                    localStorage.setItem('userRol', datos.rol || "Vendedor");
+                    iniciarApp();
+                } else {
+                    alert("⚠️ Credenciales incorrectas.");
+                }
+            } catch (error) {
+                alert("Error al iniciar sesión.");
+            }
+        };
+
+        window.cerrarSesion = () => { apagarCamaraNativa(); localStorage.clear(); location.reload(); };
+
+        function iniciarApp() {
+            document.getElementById('authScreen').classList.add('hidden');
+            document.getElementById('appScreen').classList.remove('hidden');
+
+            const empresa = localStorage.getItem('empresaId');
+            const user = localStorage.getItem('currentUser');
+            const rol = localStorage.getItem('userRol');
+            const zonas = JSON.parse(localStorage.getItem('zonas') || "[]");
+
+            document.getElementById('displayEmpresa').innerText = empresa;
+            document.getElementById('displayUser').innerText = `${user} (${rol})`;
+
+            const selectZona = document.getElementById('zonaSelect');
+            selectZona.innerHTML = "";
+            zonas.forEach(z => selectZona.add(new Option(z, z)));
+
+            const esPoderoso = rol === 'Dueño' || rol === 'Gerente';
+
+            if (esPoderoso) {
+                document.getElementById('btn-tab-registro').classList.remove('hidden');
+                document.getElementById('btnAgregarZona').classList.remove('hidden');
+            }
+            if (rol === 'Dueño') {
+                document.getElementById('btn-tab-usuarios').classList.remove('hidden');
+            }
+            if (!esPoderoso) {
+                document.querySelectorAll('.costo-col').forEach(el => el.classList.add('hidden'));
+            }
+
+            window.cargarInventarioGeneral();
+        }
+
+        // CONTROL DE CÁMARA NATIVA SIMPLIFICADA
+        window.alternarCamaraNativa = async () => {
+            const contenedor = document.getElementById('contenedor-camara');
+            const btn = document.getElementById('btnCamaraNativa');
+            const video = document.getElementById('camera-video');
+
+            if (streamCamara) {
+                apagarCamaraNativa();
+            } else {
+                try {
+                    // Pide autorización directa al celular sin librerías pesadas
+                    streamCamara = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: "environment" }, // Abre la cámara trasera por defecto
+                        audio: false
+                    });
+                    video.srcObject = streamCamara;
+                    contenedor.classList.remove('hidden');
+                    btn.innerHTML = "❌ Apagar Cámara";
+                    btn.classList.replace('bg-gray-800', 'bg-red-600');
+                } catch (err) {
+                    alert("⚠️ No se pudo acceder a la cámara. Asegúrate de dar los permisos correspondientes.");
+                    console.error(err);
+                }
+            }
+        };
+
+        function apagarCamaraNativa() {
+            const contenedor = document.getElementById('contenedor-camara');
+            const btn = document.getElementById('btnCamaraNativa');
+            const video = document.getElementById('camera-video');
+
+            if (streamCamara) {
+                streamCamara.getTracks().forEach(track => track.stop());
+                streamCamara = null;
+            }
+            if(video) video.srcObject = null;
+            if(contenedor) contenedor.classList.add('hidden');
+            if(btn) {
+                btn.innerHTML = "📷 Encender Cámara";
+                btn.classList.replace('bg-red-600', 'bg-gray-800');
+            }
+        }
+
+        window.simularLecturaCamara = () => {
+            const mockSku = prompt("Escanea o escribe el código simulado detectado por la cámara:");
+            if(mockSku) {
+                document.getElementById('venta_sku').value = mockSku;
+                apagarCamaraNativa();
+                window.buscarProductoParaVenta();
+            }
+        };
+
+        // CARGA MASIVA DE ARCHIVOS (TXT / XML)
+        window.procesarArchivoMasivo = function() {
+            const input = document.getElementById('archivoInventario');
+            const status = document.getElementById('statusCargaMasiva');
+            const zona = document.getElementById('zonaSelect').value;
+            const empresa = localStorage.getItem('empresaId');
+            const usuarioActivo = localStorage.getItem('currentUser');
+
+            if (!input.files || input.files.length === 0) return;
+            
+            const archivo = input.files[0];
+            const lector = new FileReader();
+            
+            status.classList.remove('hidden');
+            status.innerText = "⏳ Procesando archivo de inventario...";
+
+            lector.onload = async function(e) {
+                const contenido = e.target.result;
+                let productosProcesados = 0;
+
+                try {
+                    if (archivo.name.endsWith('.txt')) {
+                        // Formato TXT: SKU,Nombre,Costo,Precio,Stock
+                        const lineas = contenido.split('\n');
+                        for (let linea of lineas) {
+                            linea = linea.trim();
+                            if (!linea) continue;
+                            
+                            const columnas = linea.split(',');
+                            if (columnas.length >= 5) {
+                                const sku = columnas[0].trim();
+                                const nombre = columnas[1].trim();
+                                const costo = parseFloat(columnas[2]);
+                                const precio = parseFloat(columnas[3]);
+                                const stock = parseInt(columnas[4]);
+
+                                if (sku && !isNaN(stock)) {
+                                    const rutaBodega = `${empresa}_Inventario_${zona}`;
+                                    await setDoc(doc(db, rutaBodega, sku), {
+                                        sku, nombre, costo, precio, stock, zona
+                                    });
+                                    productosProcesados++;
+                                }
+                            }
+                        }
+                    } else if (archivo.name.endsWith('.xml')) {
+                        // Formato XML Simple
+                        const parser = new DOMParser();
+                        const xmlDoc = parser.parseFromString(contenido, "text/xml");
+                        const items = xmlDoc.getElementsByTagName("producto");
+
+                        for (let i = 0; i < items.length; i++) {
+                            const item = items[i];
+                            const sku = item.getElementsByTagName("sku")[0]?.textContent || "";
+                            const nombre = item.getElementsByTagName("nombre")[0]?.textContent || "";
+                            const costo = parseFloat(item.getElementsByTagName("costo")[0]?.textContent || 0);
+                            const precio = parseFloat(item.getElementsByTagName("precio")[0]?.textContent || 0);
+                            const stock = parseInt(item.getElementsByTagName("stock")[0]?.textContent || 0);
+
+                            if (sku) {
+                                const rutaBodega = `${empresa}_Inventario_${zona}`;
+                                await setDoc(doc(db, rutaBodega, sku), {
+                                    sku, nombre, costo, precio, stock, zona
+                                });
+                                productosProcesados++;
+                            }
+                        }
+                    }
+
+                    status.className = "mt-4 p-3 bg-green-100 text-green-700 text-sm rounded font-bold";
+                    status.innerText = `✅ Carga exitosa. Se añadieron/actualizaron ${productosProcesados} productos a la zona ${zona}.`;
+                    input.value = ""; // Limpiar input
+                    window.cargarInventarioGeneral();
+                } catch (error) {
+                    console.error(error);
+                    status.className = "mt-4 p-3 bg-red-100 text-red-700 text-sm rounded";
+                    status.innerText = "❌ Error al leer la estructura del archivo. Verifica tu formato.";
+                }
+            };
+
+            lector.readAsText(archivo);
+        };
+
+        // INVENTARIO INDIVIDUAL
+        window.guardarProducto = async () => {
+            const sku = document.getElementById('p_sku').value.trim();
+            const nom = document.getElementById('p_nom').value.trim();
+            const cos = parseFloat(document.getElementById('p_cos').value);
+            const pre = parseFloat(document.getElementById('p_pre').value);
+            const stk = parseInt(document.getElementById('p_stk').value);
+            const zona = document.getElementById('zonaSelect').value;
+            const empresa = localStorage.getItem('empresaId');
+            const usuarioActivo = localStorage.getItem('currentUser');
+
+            if(!sku || isNaN(stk) || isNaN(cos) || isNaN(pre)) return alert("⚠️ Revisa que no falten datos ni costos.");
+
+            try {
+                const rutaBodega = `${empresa}_Inventario_${zona}`;
+                const docSnap = await getDoc(doc(db, rutaBodega, sku));
+                let stockFinal = stk;
+                if (docSnap.exists()) stockFinal += docSnap.data().stock;
+
+                await setDoc(doc(db, rutaBodega, sku), {
+                    sku, nombre: nom, costo: cos, precio: pre, stock: stockFinal, zona
+                });
+
+                alert("¡Producto guardado e indexado!");
+                ['p_sku', 'p_nom', 'p_cos', 'p_pre', 'p_stk'].forEach(id => document.getElementById(id).value = '');
+            } catch (error) {
+                alert("Error al subir a Firebase.");
+            }
+        };
+
+        window.cargarInventarioGeneral = async () => {
+            const zonas = JSON.parse(localStorage.getItem('zonas') || "[]");
+            const empresa = localStorage.getItem('empresaId');
+            const rol = localStorage.getItem('userRol');
+            const tbody = document.getElementById('tablaInventarioGeneralBody');
+            
+            if(!tbody) return;
+            tbody.innerHTML = "<tr><td colspan='6' class='p-4 text-center'>Cargando base de datos...</td></tr>";
+            let html = "";
+
+            try {
+                for (const z of zonas) {
+                    const snapshot = await getDocs(collection(db, `${empresa}_Inventario_${z}`));
+                    snapshot.forEach((doc) => {
+                        const p = doc.data();
+                        const colCosto = (rol === 'Dueño' || rol === 'Gerente') ? `<td class="p-3">$${p.costo}</td>` : ``;
+                        
+                        html += `
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="p-3 font-bold text-orange-600">${z}</td>
+                                <td class="p-3">${p.sku}</td>
+                                <td class="p-3">${p.nombre}</td>
+                                <td class="p-3 font-bold">${p.stock}</td>
+                                ${colCosto}
+                                <td class="p-3 text-green-600 font-bold">$${p.precio}</td>
+                            </tr>
+                        `;
+                    });
+                }
+                tbody.innerHTML = html || "<tr><td colspan='6' class='p-4 text-center'>Inventario vacío.</td></tr>";
+            } catch(e) {
+                tbody.innerHTML = "<tr><td colspan='6' class='p-4 text-center text-red-500'>Error al cargar.</td></tr>";
+            }
+        };
+
+        // VENTAS
+        window.buscarProductoParaVenta = async () => {
+            const sku = document.getElementById('venta_sku').value.trim();
+            const zona = document.getElementById('zonaSelect').value;
+            const empresa = localStorage.getItem('empresaId');
+
+            if(!sku) return alert("Ingresa o escanea un SKU primero.");
+
+            try {
+                const docSnap = await getDoc(doc(db, `${empresa}_Inventario_${zona}`, sku));
+
+                if (docSnap.exists()) {
+                    const prod = docSnap.data();
+                    document.getElementById('vp_nombre').innerText = prod.nombre;
+                    document.getElementById('vp_sku').innerText = prod.sku;
+                    document.getElementById('vp_stock').innerText = prod.stock;
+                    document.getElementById('vp_precio').innerText = prod.precio;
+                    
+                    document.getElementById('infoProductoVenta').classList.remove('hidden');
+                    if (prod.stock <= 0) alert("⚠️ Precaución: Producto sin existencias.");
+                } else {
+                    document.getElementById('infoProductoVenta').classList.add('hidden');
+                    alert("❌ Producto no registrado en esta sucursal.");
+                }
+            } catch(error) { alert("Error al buscar el producto."); }
+        };
+
+        window.registrarVenta = async () => {
+            const sku = document.getElementById('vp_sku').innerText; 
+            const zona = document.getElementById('zonaSelect').value;
+            const empresa = localStorage.getItem('empresaId');
+
+            try {
+                const docRef = doc(db, `${empresa}_Inventario_${zona}`, sku);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    let stockActual = docSnap.data().stock;
+                    if(stockActual > 0) {
+                        await setDoc(docRef, { stock: stockActual - 1 }, { merge: true });
+                        alert(`✅ Venta exitosa.`);
+                        document.getElementById('venta_sku').value = '';
+                        document.getElementById('infoProductoVenta').classList.add('hidden');
+                        window.cargarInventarioGeneral();
+                    } else {
+                        alert("⚠️ Stock insuficiente para venta.");
+                    }
+                }
+            } catch(e) { alert("Error al procesar venta."); }
+        };
+
+        window.crearUsuarioSecundario = async () => {
+            const u = document.getElementById('new_user').value.trim();
+            const p = document.getElementById('new_pass').value.trim();
+            const r = document.getElementById('new_role').value;
+            const empresa = localStorage.getItem('empresaId');
+            const zonasActuales = JSON.parse(localStorage.getItem('zonas') || "[]");
+
+            if(!u || !p) return alert("Ingresa usuario y contraseña");
+
+            try {
+                await setDoc(doc(db, "SaaS_Usuarios", u), {
+                    empresaId: empresa, pass: p, rol: r, zonas: zonasActuales
+                });
+                alert(`✅ Usuario ${u} creado.`);
+                document.getElementById('new_user').value = '';
+                document.getElementById('new_pass').value = '';
+            } catch(err) { alert("Error al crear usuario."); }
+        };
+
+        window.agregarNuevaZona = async () => {
+            const nuevaZona = prompt("Nombre de la nueva zona:");
+            if(nuevaZona) {
+                const user = localStorage.getItem('currentUser');
+                const zonas = JSON.parse(localStorage.getItem('zonas') || "[]");
+                if(!zonas.includes(nuevaZona)) {
+                    zonas.push(nuevaZona);
+                    await setDoc(doc(db, "SaaS_Usuarios", user), { zonas: zonas }, { merge: true });
+                    localStorage.setItem('zonas', JSON.stringify(zonas));
+                    iniciarApp();
+                }
+            }
+        };
+
+        window.onload = () => { if(localStorage.getItem('currentUser')) iniciarApp(); };
     </script>
 </body>
 </html>
