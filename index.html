@@ -14,21 +14,20 @@
         .reader-container { width: 100%; max-width: 400px; margin: 0 auto; }
         .reader-container video { width: 100%; border-radius: 8px; }
         
-        /* Estilos para el Toast (Notificación) */
-        #toast-container {
-            position: fixed; bottom: 20px; right: 20px; z-index: 9999;
-            display: flex; flex-direction: column; gap: 10px;
-        }
-        .toast {
-            background-color: #10b981; color: white; padding: 12px 24px;
-            border-radius: 8px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            animation: fadeInOut 2s ease-in-out forwards;
-        }
-        @keyframes fadeInOut {
-            0% { opacity: 0; transform: translateY(20px); }
-            10% { opacity: 1; transform: translateY(0); }
-            80% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-20px); }
+        /* Sistema de Notificaciones (Toast) */
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background-color: #10b981; color: white; padding: 12px 24px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); animation: fadeInOut 2s ease-in-out forwards; }
+        @keyframes fadeInOut { 0% { opacity: 0; transform: translateY(20px); } 10% { opacity: 1; transform: translateY(0); } 80% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-20px); } }
+        
+        /* Estilos de Impresión (Ticket) */
+        @media print {
+            body * { visibility: hidden; }
+            #zona-impresion, #zona-impresion * { visibility: visible; }
+            #zona-impresion { position: absolute; left: 0; top: 0; width: 100%; max-width: 80mm; font-family: 'Courier New', Courier, monospace; font-size: 12px; color: black; margin: 0; padding: 10px; }
+            .ticket-header { text-align: center; margin-bottom: 10px; }
+            .ticket-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+            .ticket-table th, .ticket-table td { text-align: left; border-bottom: 1px dashed #ccc; padding: 4px 0; }
+            .ticket-total { font-weight: bold; font-size: 14px; text-align: right; margin-top: 10px; }
         }
     </style>
 </head>
@@ -36,35 +35,34 @@
 
     <div id="toast-container"></div>
 
+    <div id="zona-impresion" class="hidden">
+        <div class="ticket-header">
+            <h2 id="tk_empresa" style="font-size: 18px; margin:0;">BOOMBOX</h2>
+            <p id="tk_sucursal" style="margin: 2px 0;">Sucursal</p>
+            <p style="margin: 2px 0;">Folio: <span id="tk_folio"></span></p>
+            <p style="margin: 2px 0;">Fecha: <span id="tk_fecha"></span></p>
+            <p style="margin: 2px 0;">Atendió: <span id="tk_cajero"></span></p>
+        </div>
+        <table class="ticket-table">
+            <thead><tr><th>Cant</th><th>Producto</th><th>Importe</th></tr></thead>
+            <tbody id="tk_productos"></tbody>
+        </table>
+        <div class="ticket-total">TOTAL: $<span id="tk_total">0.00</span></div>
+        <p style="text-align: center; margin-top: 15px; font-size: 10px;">¡Gracias por su compra!</p>
+    </div>
+
     <div id="modalEdicion" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative">
             <h2 class="text-xl font-bold mb-4 text-orange-600 border-b pb-2">✏️ Editar Inventario</h2>
-            
             <div class="space-y-4">
-                <div>
-                    <label class="text-sm font-bold text-gray-600">SKU (No editable)</label>
-                    <input type="text" id="edit_sku" class="w-full p-2 border rounded bg-gray-100 cursor-not-allowed" disabled>
-                </div>
-                <div>
-                    <label class="text-sm font-bold text-gray-600">Nombre del Producto</label>
-                    <input type="text" id="edit_nom" class="w-full p-2 border rounded focus:ring-2 focus:ring-orange-500">
-                </div>
+                <div><label class="text-sm font-bold text-gray-600">SKU (No editable)</label><input type="text" id="edit_sku" class="w-full p-2 border rounded bg-gray-100 cursor-not-allowed" disabled></div>
+                <div><label class="text-sm font-bold text-gray-600">Nombre del Producto</label><input type="text" id="edit_nom" class="w-full p-2 border rounded focus:ring-2 focus:ring-orange-500"></div>
                 <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-sm font-bold text-gray-600">Costo ($)</label>
-                        <input type="number" id="edit_cos" class="w-full p-2 border rounded focus:ring-2 focus:ring-orange-500">
-                    </div>
-                    <div>
-                        <label class="text-sm font-bold text-gray-600">Precio Venta ($)</label>
-                        <input type="number" id="edit_pre" class="w-full p-2 border rounded focus:ring-2 focus:ring-orange-500">
-                    </div>
+                    <div><label class="text-sm font-bold text-gray-600">Costo ($)</label><input type="number" id="edit_cos" class="w-full p-2 border rounded focus:ring-2 focus:ring-orange-500"></div>
+                    <div><label class="text-sm font-bold text-gray-600">Precio Venta ($)</label><input type="number" id="edit_pre" class="w-full p-2 border rounded focus:ring-2 focus:ring-orange-500"></div>
                 </div>
-                <div>
-                    <label class="text-sm font-bold text-gray-600">Stock Actual (Piezas)</label>
-                    <input type="number" id="edit_stk" class="w-full p-2 border rounded focus:ring-2 focus:ring-orange-500">
-                </div>
+                <div><label class="text-sm font-bold text-gray-600">Stock Actual</label><input type="number" id="edit_stk" class="w-full p-2 border rounded focus:ring-2 focus:ring-orange-500"></div>
             </div>
-
             <div class="mt-6 flex justify-end gap-3">
                 <button type="button" onclick="cerrarModalEdicion()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded font-bold text-gray-700">Cancelar</button>
                 <button type="button" onclick="guardarEdicionProducto()" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded font-bold text-white shadow">Guardar Cambios</button>
@@ -77,31 +75,36 @@
             <div class="flex justify-center mb-8">
                 <img src="BOOMBOX 2.png" alt="BOOMBOX Logo" class="w-80 md:w-96 h-auto object-contain">
             </div>
+            
             <div id="loginForm">
                 <h2 class="text-lg font-bold text-gray-700 mb-4">Iniciar Sesión</h2>
-                <input type="text" id="loginUser" placeholder="Usuario" class="w-full mb-3 p-3 border rounded-lg focus:ring-2 focus:ring-orange-500">
+                <input type="text" id="loginUser" placeholder="Usuario (Ej. raulD2H)" class="w-full mb-3 p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 font-bold text-lg">
                 <input type="password" id="loginPass" placeholder="Contraseña" class="w-full mb-4 p-3 border rounded-lg focus:ring-2 focus:ring-orange-500">
-                <button type="button" onclick="iniciarSesion()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg transition">Entrar</button>
-                <p class="mt-4 text-sm text-gray-500">¿Nuevo negocio? <span onclick="toggleAuth()" class="text-orange-500 cursor-pointer font-bold">Regístrate aquí</span></p>
+                <button type="button" onclick="iniciarSesion()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg transition mb-4">Entrar</button>
+                <button type="button" onclick="recuperarPassword()" class="text-sm text-blue-600 hover:underline">¿Olvidaste tu contraseña?</button>
+                <p class="mt-4 text-sm text-gray-500 border-t pt-4">¿Nuevo negocio? <span onclick="toggleAuth()" class="text-orange-500 cursor-pointer font-bold">Regístrate aquí</span></p>
             </div>
-            <div id="registerForm" class="hidden">
-                <h2 class="text-lg font-bold text-gray-700 mb-4">Registrar Negocio</h2>
-                <input type="text" id="regEmpresa" placeholder="Nombre del Negocio" class="w-full mb-3 p-3 border rounded-lg text-sm">
-                <input type="text" id="regZona" placeholder="Zona Principal" class="w-full mb-3 p-3 border rounded-lg text-sm">
-                <input type="text" id="regUser" placeholder="Tu Usuario (Dueño)" class="w-full mb-3 p-3 border rounded-lg text-sm">
-                <input type="password" id="regPass" placeholder="Crear Contraseña" class="w-full mb-4 p-3 border rounded-lg text-sm">
+
+            <div id="registerForm" class="hidden text-left">
+                <h2 class="text-lg font-bold text-gray-700 mb-4 text-center">Registrar Negocio</h2>
+                <label class="text-xs font-bold text-gray-500 uppercase">Datos del Negocio</label>
+                <input type="text" id="regEmpresa" placeholder="Nombre (Ej. DISTRIBUIDORES2HERMANOS)" class="w-full mb-2 p-3 border rounded-lg text-sm bg-gray-50">
+                <input type="text" id="regZona" placeholder="Zona Principal (Ej. Toluca)" class="w-full mb-4 p-3 border rounded-lg text-sm bg-gray-50">
+                
+                <label class="text-xs font-bold text-gray-500 uppercase">Datos del Administrador</label>
+                <input type="text" id="regUser" placeholder="Crea un Usuario (Ej. dueño123)" class="w-full mb-2 p-3 border rounded-lg text-sm bg-gray-50">
+                <input type="email" id="regEmail" placeholder="Correo (Solo para recuperar contraseña)" class="w-full mb-2 p-3 border rounded-lg text-sm bg-gray-50">
+                <input type="password" id="regPass" placeholder="Contraseña (mínimo 6 caracteres)" class="w-full mb-6 p-3 border rounded-lg text-sm bg-gray-50">
+                
                 <button type="button" onclick="registrarNegocio()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Crear Cuenta Principal</button>
-                <p class="mt-4 text-sm text-gray-500">¿Ya tienes cuenta? <span onclick="toggleAuth()" class="text-blue-600 cursor-pointer font-bold">Inicia sesión</span></p>
+                <p class="mt-4 text-sm text-center text-gray-500">¿Ya tienes cuenta? <span onclick="toggleAuth()" class="text-blue-600 cursor-pointer font-bold">Inicia sesión</span></p>
             </div>
         </div>
     </div>
 
     <div id="appScreen" class="hidden min-h-screen">
-        
         <nav class="bg-white shadow-md p-4 flex justify-between items-center relative z-10">
-            <div class="flex items-center">
-                <img src="BOOMBOX 2.png" alt="BOOMBOX" class="h-8">
-            </div>
+            <div class="flex items-center"><img src="BOOMBOX 2.png" alt="BOOMBOX" class="h-8"></div>
             <div class="flex items-center gap-4">
                 <div class="text-right">
                     <p class="font-bold text-gray-800" id="displayEmpresa">Negocio</p>
@@ -113,10 +116,10 @@
 
         <div class="bg-white border-b flex justify-start md:justify-center gap-4 md:gap-8 text-sm font-semibold text-gray-600 overflow-x-auto whitespace-nowrap px-4">
             <button type="button" onclick="cambiarPestaña('tab-ventas')" id="btn-tab-ventas" class="py-4 px-2 hover:text-orange-500 tab-active">Ventas Mostrador</button>
-            <button type="button" onclick="cambiarPestaña('tab-general')" id="btn-tab-general" class="py-4 px-2 hover:text-orange-500">Inventario General</button>
-            <button type="button" onclick="cambiarPestaña('tab-kardex')" id="btn-tab-kardex" class="py-4 px-2 hover:text-orange-500 hidden">Kardex (Historial)</button>
-            <button type="button" onclick="cambiarPestaña('tab-registro')" id="btn-tab-registro" class="py-4 px-2 hover:text-orange-500 hidden">Ingreso de Bodega</button>
-            <button type="button" onclick="cambiarPestaña('tab-usuarios')" id="btn-tab-usuarios" class="py-4 px-2 hover:text-orange-500 hidden">Gestión de Usuarios</button>
+            <button type="button" onclick="cambiarPestaña('tab-general')" id="btn-tab-general" class="py-4 px-2 hover:text-orange-500">Inventario</button>
+            <button type="button" onclick="cambiarPestaña('tab-kardex')" id="btn-tab-kardex" class="py-4 px-2 hover:text-orange-500 hidden">Kardex</button>
+            <button type="button" onclick="cambiarPestaña('tab-registro')" id="btn-tab-registro" class="py-4 px-2 hover:text-orange-500 hidden">Bodega</button>
+            <button type="button" onclick="cambiarPestaña('tab-usuarios')" id="btn-tab-usuarios" class="py-4 px-2 hover:text-orange-500 hidden">Usuarios</button>
         </div>
 
         <div class="max-w-7xl mx-auto p-4 md:p-6 mt-4">
@@ -127,23 +130,18 @@
                     <select id="zonaSelect" onchange="alCambiarZona()" class="p-2 border rounded bg-gray-50 focus:ring-2 focus:ring-orange-500"></select>
                     <button type="button" id="btnAgregarZona" onclick="agregarNuevaZona()" class="text-sm bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded hidden">+ Nueva Zona</button>
                 </div>
-                <button type="button" id="btnVaciarInventario" onclick="vaciarInventario()" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-sm shadow">
-                    ⚠️ Vaciar Inventario
-                </button>
+                <button type="button" id="btnVaciarInventario" onclick="vaciarInventario()" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-sm shadow">⚠️ Vaciar Inventario</button>
             </div>
 
             <div id="tab-ventas" class="tab-content block">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div class="bg-white p-6 rounded-lg shadow-md h-fit">
                         <h2 class="text-xl font-bold mb-4 flex items-center gap-2">🛒 Agregar Producto</h2>
-                        
                         <div class="relative w-full mb-4">
-                            <input type="text" id="venta_busqueda" onkeyup="filtrarProductos()" placeholder="Ej. SKU, Papel Higiénico..." class="p-3 border rounded w-full focus:ring-2 focus:ring-orange-500 text-lg" autocomplete="off">
+                            <input type="text" id="venta_busqueda" onkeyup="filtrarProductos()" placeholder="Busca SKU o Nombre..." class="p-3 border rounded w-full focus:ring-2 focus:ring-orange-500 text-lg" autocomplete="off">
                             <div id="sugerencias_venta" class="absolute z-50 w-full bg-white border rounded shadow-lg hidden max-h-48 overflow-y-auto mt-1"></div>
                         </div>
-
                         <div class="text-center my-4 font-bold text-gray-300">--- O ESCANEA ---</div>
-
                         <div class="mb-4">
                             <button type="button" id="btn-iniciar-camara-ventas" onclick="iniciarCamara('ventas')" class="w-full bg-gray-800 text-white font-bold py-4 rounded-lg hover:bg-black transition">📷 Escanear con Cámara</button>
                             <button type="button" id="btn-detener-camara-ventas" onclick="detenerCamara('ventas')" class="hidden w-full bg-red-600 text-white font-bold py-4 rounded-lg hover:bg-red-700 transition">❌ Cancelar Escaneo</button>
@@ -153,23 +151,16 @@
 
                     <div class="bg-white p-6 rounded-lg shadow-md flex flex-col">
                         <h2 class="text-xl font-bold mb-4 text-orange-600">🛍️ Lista de Compra</h2>
-                        
                         <div class="overflow-y-auto max-h-72 mb-4 border-b pb-4">
                             <table class="w-full text-left">
                                 <thead>
                                     <tr class="text-gray-500 text-sm border-b">
-                                        <th class="pb-2">Producto</th>
-                                        <th class="pb-2 text-center">Cant.</th>
-                                        <th class="pb-2 text-right">Subtotal</th>
-                                        <th></th>
+                                        <th class="pb-2">Producto</th><th class="pb-2 text-center">Cant.</th><th class="pb-2 text-right">Subtotal</th><th></th>
                                     </tr>
                                 </thead>
-                                <tbody id="tabla-carrito">
-                                    <tr><td colspan="4" class="text-center text-gray-400 py-4">El carrito está vacío</td></tr>
-                                </tbody>
+                                <tbody id="tabla-carrito"><tr><td colspan="4" class="text-center text-gray-400 py-4">El carrito está vacío</td></tr></tbody>
                             </table>
                         </div>
-
                         <div class="mt-auto">
                             <div class="flex justify-between items-center mb-6">
                                 <span class="text-xl font-bold text-gray-600">TOTAL:</span>
@@ -188,41 +179,27 @@
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-gray-100 text-gray-700">
-                                <th class="p-3 border-b">SKU</th>
-                                <th class="p-3 border-b">Producto</th>
-                                <th class="p-3 border-b">Stock</th>
-                                <th class="p-3 border-b costo-col">Costo</th>
-                                <th class="p-3 border-b">Precio Venta</th>
-                                <th class="p-3 border-b accion-col hidden">Acciones</th>
+                                <th class="p-3 border-b">SKU</th><th class="p-3 border-b">Producto</th><th class="p-3 border-b">Stock</th>
+                                <th class="p-3 border-b costo-col">Costo</th><th class="p-3 border-b">Precio Venta</th><th class="p-3 border-b accion-col hidden">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody id="tablaInventarioGeneralBody">
-                            <tr><td colspan="6" class="p-4 text-center text-gray-500">Cargando datos...</td></tr>
-                        </tbody>
+                        <tbody id="tablaInventarioGeneralBody"><tr><td colspan="6" class="p-4 text-center text-gray-500">Cargando datos...</td></tr></tbody>
                     </table>
                 </div>
             </div>
 
             <div id="tab-kardex" class="tab-content hidden">
                 <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto border-t-4 border-indigo-500">
-                    <h2 class="text-xl font-bold mb-2 flex items-center gap-2">📋 Kardex (Entradas, Salidas y Ajustes)</h2>
-                    <p class="text-xs text-gray-500 mb-4">Registro exacto de movimientos en la zona actual.</p>
+                    <h2 class="text-xl font-bold mb-2 flex items-center gap-2">📋 Kardex (Historial de Movimientos)</h2>
                     <button type="button" onclick="cargarKardex()" class="mb-4 text-sm text-indigo-600 underline">↻ Actualizar Kardex</button>
-                    
                     <table class="w-full text-left border-collapse text-sm">
                         <thead>
                             <tr class="bg-gray-100 text-gray-700">
-                                <th class="p-3 border-b">Fecha y Hora</th>
-                                <th class="p-3 border-b">Movimiento</th>
-                                <th class="p-3 border-b">SKU</th>
-                                <th class="p-3 border-b">Producto</th>
-                                <th class="p-3 border-b">Cant/Stock</th>
-                                <th class="p-3 border-b">Usuario</th>
+                                <th class="p-3 border-b">Fecha y Hora</th><th class="p-3 border-b">Movimiento</th><th class="p-3 border-b">SKU</th>
+                                <th class="p-3 border-b">Producto</th><th class="p-3 border-b">Piezas</th><th class="p-3 border-b">Usuario</th>
                             </tr>
                         </thead>
-                        <tbody id="tablaKardexBody">
-                            <tr><td colspan="6" class="p-4 text-center text-gray-500">Cargando kardex...</td></tr>
-                        </tbody>
+                        <tbody id="tablaKardexBody"><tr><td colspan="6" class="p-4 text-center text-gray-500">Cargando kardex...</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -230,19 +207,17 @@
             <div id="tab-registro" class="tab-content hidden">
                 <div class="bg-white p-6 rounded-lg shadow-md mb-6 border-t-4 border-green-500">
                     <h2 class="text-xl font-bold mb-2 flex items-center gap-2">📦 Ingreso Manual</h2>
-                    
                     <div class="mb-4 flex gap-2">
                         <button type="button" id="btn-iniciar-camara-ingreso" onclick="iniciarCamara('ingreso')" class="bg-gray-800 text-white font-bold py-2 px-4 rounded-lg hover:bg-black transition">📷 Escanear SKU</button>
                         <button type="button" id="btn-detener-camara-ingreso" onclick="detenerCamara('ingreso')" class="hidden bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition">❌ Cancelar</button>
                     </div>
                     <div id="reader-ingreso" class="hidden reader-container border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-gray-50 mb-4"></div>
-
                     <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
                         <input type="text" id="p_sku" placeholder="SKU" class="p-3 border rounded focus:ring-2 focus:ring-green-500 bg-green-50">
-                        <input type="text" id="p_nom" placeholder="Nombre del Producto" class="p-3 border rounded focus:ring-2 focus:ring-green-500 md:col-span-2">
-                        <input type="number" id="p_cos" placeholder="Costo ($)" class="p-3 border rounded focus:ring-2 focus:ring-green-500">
-                        <input type="number" id="p_pre" placeholder="Precio Venta ($)" class="p-3 border rounded focus:ring-2 focus:ring-green-500">
-                        <input type="number" id="p_stk" placeholder="Cantidad" class="p-3 border rounded focus:ring-2 focus:ring-green-500">
+                        <input type="text" id="p_nom" placeholder="Nombre" class="p-3 border rounded focus:ring-2 focus:ring-green-500 md:col-span-2">
+                        <input type="number" id="p_cos" placeholder="Costo" class="p-3 border rounded focus:ring-2 focus:ring-green-500">
+                        <input type="number" id="p_pre" placeholder="Precio Venta" class="p-3 border rounded focus:ring-2 focus:ring-green-500">
+                        <input type="number" id="p_stk" placeholder="Piezas Ingresadas" class="p-3 border rounded focus:ring-2 focus:ring-green-500">
                     </div>
                     <button type="button" onclick="guardarProducto()" class="mt-4 w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded shadow transition">Guardar Ingreso</button>
                 </div>
@@ -251,10 +226,7 @@
                     <h2 class="text-xl font-bold mb-2 flex items-center gap-2">📄 Carga Masiva de Inventario</h2>
                     <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50 hover:bg-gray-100 transition relative">
                         <input type="file" id="archivoInventario" accept=".txt,.xml" onchange="procesarArchivoMasivo()" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                        <div class="flex flex-col items-center justify-center">
-                            <span class="text-4xl mb-2">📁</span>
-                            <p class="text-sm font-medium text-gray-700">Haz clic aquí o arrastra tu archivo TXT o XML</p>
-                        </div>
+                        <div class="flex flex-col items-center justify-center"><span class="text-4xl mb-2">📁</span><p class="text-sm font-medium text-gray-700">Arrastra tu archivo TXT o XML</p></div>
                     </div>
                     <div id="statusCargaMasiva" class="hidden mt-4 p-3 text-sm rounded font-bold"></div>
                 </div>
@@ -265,7 +237,8 @@
                     <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-blue-500 h-fit">
                         <h2 class="text-xl font-bold mb-4">👥 Registrar Colaborador</h2>
                         <div class="flex flex-col gap-4">
-                            <input type="text" id="new_user" placeholder="Nombre de Usuario" class="p-3 border rounded focus:ring-2 focus:ring-blue-500">
+                            <input type="text" id="new_user" placeholder="Crear Usuario (Ej. ventas_centro)" class="p-3 border rounded focus:ring-2 focus:ring-blue-500">
+                            <input type="email" id="new_email" placeholder="Correo Real (Para recuperar contraseña)" class="p-3 border rounded focus:ring-2 focus:ring-blue-500">
                             <input type="password" id="new_pass" placeholder="Contraseña" class="p-3 border rounded focus:ring-2 focus:ring-blue-500">
                             <select id="new_role" class="p-3 border rounded focus:ring-2 focus:ring-blue-500">
                                 <option value="Vendedor">Vendedor</option>
@@ -278,16 +251,8 @@
                         <h2 class="text-xl font-bold mb-4">📋 Lista de Usuarios</h2>
                         <button type="button" onclick="cargarUsuarios()" class="mb-4 text-sm text-blue-600 underline">↻ Actualizar Lista</button>
                         <table class="w-full text-left text-sm border-collapse">
-                            <thead>
-                                <tr class="bg-gray-100 text-gray-700">
-                                    <th class="p-2 border-b">Usuario</th>
-                                    <th class="p-2 border-b">Rol</th>
-                                    <th class="p-2 border-b">Zonas de Acceso</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tablaUsuariosBody">
-                                <tr><td colspan="3" class="text-center p-4 text-gray-500">Cargando...</td></tr>
-                            </tbody>
+                            <thead><tr class="bg-gray-100 text-gray-700"><th class="p-2 border-b">Usuario</th><th class="p-2 border-b">Rol</th><th class="p-2 border-b">Zonas</th></tr></thead>
+                            <tbody id="tablaUsuariosBody"><tr><td colspan="3" class="text-center p-4 text-gray-500">Cargando...</td></tr></tbody>
                         </table>
                     </div>
                 </div>
@@ -299,6 +264,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, collection, getDocs, addDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDXXqcuMvdYZdrwMkw95KwiJ_UD_CIyD8g",
@@ -312,548 +278,287 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
         window.db = db;
         
-        window.inventarioLocal = [];
-        window.carrito = [];
+        window.inventarioLocal = []; window.carrito = [];
 
-        // NOTIFICACIONES Y SONIDOS (TOAST)
         window.mostrarNotificacion = (mensaje) => {
-            try { 
-                const beep = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-                beep.volume = 0.5; beep.play(); 
-            } catch(e) {}
-            
-            const cont = document.getElementById('toast-container');
-            const t = document.createElement('div');
-            t.className = 'toast'; t.innerText = mensaje;
-            cont.appendChild(t);
+            try { const beep = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg'); beep.volume = 0.5; beep.play(); } catch(e) {}
+            const cont = document.getElementById('toast-container'); const t = document.createElement('div');
+            t.className = 'toast'; t.innerText = mensaje; cont.appendChild(t);
             setTimeout(() => { if(t.parentNode) t.parentNode.removeChild(t); }, 2000);
         };
 
-        // UI
-        window.toggleAuth = () => {
-            document.getElementById('loginForm').classList.toggle('hidden');
-            document.getElementById('registerForm').classList.toggle('hidden');
-        };
+        window.toggleAuth = () => { document.getElementById('loginForm').classList.toggle('hidden'); document.getElementById('registerForm').classList.toggle('hidden'); };
 
         window.cambiarPestaña = (idTab) => {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('button[id^="btn-tab-"]').forEach(btn => btn.classList.remove('tab-active'));
-            document.getElementById(idTab).classList.remove('hidden');
-            document.getElementById('btn-' + idTab).classList.add('tab-active');
-            
-            window.detenerCamara('ventas');
-            window.detenerCamara('ingreso');
-
+            document.getElementById(idTab).classList.remove('hidden'); document.getElementById('btn-' + idTab).classList.add('tab-active');
+            window.detenerCamara('ventas'); window.detenerCamara('ingreso');
             if(idTab === 'tab-general' || idTab === 'tab-ventas') window.cargarInventarioGeneral();
             if(idTab === 'tab-kardex') window.cargarKardex();
             if(idTab === 'tab-usuarios') window.cargarUsuarios();
         };
 
-        window.alCambiarZona = () => {
-            window.cargarInventarioGeneral();
-            if(!document.getElementById('tab-kardex').classList.contains('hidden')) window.cargarKardex();
+        window.alCambiarZona = () => { window.cargarInventarioGeneral(); if(!document.getElementById('tab-kardex').classList.contains('hidden')) window.cargarKardex(); };
+
+        // AUTH CON ALIAS
+        window.registrarNegocio = async () => {
+            const empresa = document.getElementById('regEmpresa').value.trim().toUpperCase();
+            const zona = document.getElementById('regZona').value.trim();
+            const user = document.getElementById('regUser').value.trim();
+            const email = document.getElementById('regEmail').value.trim().toLowerCase();
+            const pass = document.getElementById('regPass').value.trim();
+
+            if(!empresa || !zona || !user || !email || !pass) return alert("Llena todos los campos.");
+
+            try {
+                await createUserWithEmailAndPassword(auth, email, pass);
+                await setDoc(doc(db, "SaaS_Directorio", user), { email: email });
+                await setDoc(doc(db, "SaaS_Usuarios", user), { empresaId: empresa.replace(/\s+/g, ''), zonas: [zona], rol: "Dueño", usuario: user });
+                alert("¡Negocio creado! Ahora inicia sesión con tu Usuario."); toggleAuth();
+            } catch (error) { alert("Error: " + error.message); }
         };
 
-        // AUTH
-        window.registrarNegocio = async () => { /* ... igual ... */ };
         window.iniciarSesion = async () => {
-            const user = document.getElementById('loginUser').value.trim();
-            const pass = document.getElementById('loginPass').value.trim();
+            const user = document.getElementById('loginUser').value.trim(); const pass = document.getElementById('loginPass').value.trim();
             if(!user || !pass) return alert("Faltan datos");
 
             try {
+                const dirDoc = await getDoc(doc(db, "SaaS_Directorio", user));
+                if(!dirDoc.exists()) return alert("Usuario no encontrado.");
+                const email = dirDoc.data().email;
+                await signInWithEmailAndPassword(auth, email, pass);
                 const userDoc = await getDoc(doc(db, "SaaS_Usuarios", user));
-                if (userDoc.exists() && userDoc.data().pass === pass) {
+                if (userDoc.exists()) {
                     const datos = userDoc.data();
-                    localStorage.setItem('currentUser', user);
-                    localStorage.setItem('empresaId', datos.empresaId);
-                    localStorage.setItem('zonas', JSON.stringify(datos.zonas));
-                    localStorage.setItem('userRol', datos.rol || "Vendedor");
+                    localStorage.setItem('currentUser', user); localStorage.setItem('empresaId', datos.empresaId);
+                    localStorage.setItem('zonas', JSON.stringify(datos.zonas)); localStorage.setItem('userRol', datos.rol || "Vendedor");
                     iniciarApp();
-                } else { alert("Credenciales incorrectas."); }
-            } catch (error) { alert("Error al iniciar sesión."); }
+                }
+            } catch (error) { alert("Contraseña incorrecta o error de red."); }
+        };
+
+        window.recuperarPassword = async () => {
+            const user = prompt("Ingresa tu Usuario (Ej. raulD2H) para recuperar la contraseña:");
+            if(!user) return;
+            try {
+                const dirDoc = await getDoc(doc(db, "SaaS_Directorio", user));
+                if(!dirDoc.exists()) return alert("Usuario no encontrado.");
+                await sendPasswordResetEmail(auth, dirDoc.data().email);
+                alert(`Te enviamos un enlace de recuperación al correo de este usuario.`);
+            } catch(e) { alert("Error al intentar enviar el correo."); }
         };
 
         window.cerrarSesion = () => { localStorage.clear(); location.reload(); };
 
         function iniciarApp() {
-            document.getElementById('authScreen').classList.add('hidden');
-            document.getElementById('appScreen').classList.remove('hidden');
-            const empresa = localStorage.getItem('empresaId');
-            const user = localStorage.getItem('currentUser');
-            const rol = localStorage.getItem('userRol');
-            const zonas = JSON.parse(localStorage.getItem('zonas') || "[]");
+            document.getElementById('authScreen').classList.add('hidden'); document.getElementById('appScreen').classList.remove('hidden');
+            const empresa = localStorage.getItem('empresaId'); const user = localStorage.getItem('currentUser'); const rol = localStorage.getItem('userRol'); const zonas = JSON.parse(localStorage.getItem('zonas') || "[]");
+            document.getElementById('displayEmpresa').innerText = empresa; document.getElementById('displayUser').innerText = `${user} (${rol})`;
+            const selectZona = document.getElementById('zonaSelect'); selectZona.innerHTML = ""; zonas.forEach(z => selectZona.add(new Option(z, z)));
 
-            document.getElementById('displayEmpresa').innerText = empresa;
-            document.getElementById('displayUser').innerText = `${user} (${rol})`;
+            if (rol === 'Dueño' || rol === 'Gerente') {
+                document.getElementById('btn-tab-registro').classList.remove('hidden'); document.getElementById('btn-tab-kardex').classList.remove('hidden');
+                document.getElementById('btnAgregarZona').classList.remove('hidden'); document.querySelectorAll('.accion-col').forEach(el => el.classList.remove('hidden'));
+            } else { document.querySelectorAll('.costo-col').forEach(el => el.classList.add('hidden')); }
 
-            const selectZona = document.getElementById('zonaSelect');
-            selectZona.innerHTML = "";
-            zonas.forEach(z => selectZona.add(new Option(z, z)));
-
-            const esPoderoso = rol === 'Dueño' || rol === 'Gerente';
-            const esDueno = rol === 'Dueño';
-
-            if (esPoderoso) {
-                document.getElementById('btn-tab-registro').classList.remove('hidden');
-                document.getElementById('btn-tab-kardex').classList.remove('hidden');
-                document.getElementById('btnAgregarZona').classList.remove('hidden');
-                document.querySelectorAll('.accion-col').forEach(el => el.classList.remove('hidden'));
-            } else {
-                document.querySelectorAll('.costo-col').forEach(el => el.classList.add('hidden'));
-            }
-
-            if (esDueno) {
-                document.getElementById('btn-tab-usuarios').classList.remove('hidden');
-                document.getElementById('btnVaciarInventario').classList.remove('hidden');
-            }
-
+            if (rol === 'Dueño') { document.getElementById('btn-tab-usuarios').classList.remove('hidden'); document.getElementById('btnVaciarInventario').classList.remove('hidden'); }
             window.cargarInventarioGeneral();
         }
 
         // CÁMARA
         let scanners = { ventas: null, ingreso: null };
-        window.iniciarCamara = (modulo) => {
-            const divReader = `reader-${modulo}`;
-            document.getElementById(divReader).classList.remove('hidden');
-            document.getElementById(`btn-iniciar-camara-${modulo}`).classList.add('hidden');
-            document.getElementById(`btn-detener-camara-${modulo}`).classList.remove('hidden');
-
-            scanners[modulo] = new Html5Qrcode(divReader);
-            scanners[modulo].start(
-                { facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } },
-                (decodedText) => {
-                    window.detenerCamara(modulo);
-                    if(modulo === 'ventas') {
-                        const producto = window.inventarioLocal.find(p => p.sku === decodedText);
-                        if(producto) window.agregarAlCarrito(producto);
-                        else alert("SKU no encontrado.");
-                    } else {
-                        document.getElementById('p_sku').value = decodedText;
-                    }
-                },
-                (errorMessage) => {}
-            ).catch(err => alert("Permiso de cámara denegado."));
+        window.iniciarCamara = (m) => { 
+            document.getElementById(`reader-${m}`).classList.remove('hidden'); document.getElementById(`btn-iniciar-camara-${m}`).classList.add('hidden'); document.getElementById(`btn-detener-camara-${m}`).classList.remove('hidden');
+            scanners[m] = new Html5Qrcode(`reader-${m}`);
+            scanners[m].start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } }, (decodedText) => {
+                window.detenerCamara(m);
+                if(m === 'ventas') { const p = window.inventarioLocal.find(x => x.sku === decodedText); if(p) window.agregarAlCarrito(p); else alert("SKU no encontrado."); } else { document.getElementById('p_sku').value = decodedText; }
+            }, (e) => {}).catch(err => alert("Cámara denegada."));
         };
-        window.detenerCamara = (modulo) => {
-            if (scanners[modulo]) {
-                scanners[modulo].stop().then(() => {
-                    document.getElementById(`reader-${modulo}`).classList.add('hidden');
-                    document.getElementById(`btn-iniciar-camara-${modulo}`).classList.remove('hidden');
-                    document.getElementById(`btn-detener-camara-${modulo}`).classList.add('hidden');
-                }).catch(err => console.log(err));
-            }
-        };
+        window.detenerCamara = (m) => { if(scanners[m]) scanners[m].stop().then(() => { document.getElementById(`reader-${m}`).classList.add('hidden'); document.getElementById(`btn-iniciar-camara-${m}`).classList.remove('hidden'); document.getElementById(`btn-detener-camara-${m}`).classList.add('hidden'); }).catch(e=>console.log(e)); };
 
-        // VENTAS Y CARRITO EDITABLE
+        // VENTAS Y CARRITO
         window.filtrarProductos = () => {
-            const input = document.getElementById('venta_busqueda').value.toLowerCase();
-            const contenedor = document.getElementById('sugerencias_venta');
-            contenedor.innerHTML = '';
-            
-            if (input.length < 1) { contenedor.classList.add('hidden'); return; }
-            const resultados = window.inventarioLocal.filter(p => p.sku.toLowerCase().includes(input) || p.nombre.toLowerCase().includes(input));
-
-            if (resultados.length > 0) {
-                contenedor.classList.remove('hidden');
-                resultados.forEach(p => {
-                    const div = document.createElement('div');
-                    div.className = "p-3 hover:bg-orange-50 cursor-pointer border-b text-sm text-gray-700 font-medium flex justify-between";
-                    div.innerHTML = `<span><span class="text-orange-600 font-bold">${p.sku}</span> - ${p.nombre}</span> <span class="text-green-600 font-bold">$${p.precio}</span>`;
-                    div.onclick = () => { window.agregarAlCarrito(p); document.getElementById('venta_busqueda').value = ''; contenedor.classList.add('hidden'); };
-                    contenedor.appendChild(div);
+            const i = document.getElementById('venta_busqueda').value.toLowerCase(); const c = document.getElementById('sugerencias_venta'); c.innerHTML = '';
+            if (i.length < 1) { c.classList.add('hidden'); return; }
+            const r = window.inventarioLocal.filter(p => p.sku.toLowerCase().includes(i) || p.nombre.toLowerCase().includes(i));
+            if (r.length > 0) {
+                c.classList.remove('hidden'); r.forEach(p => {
+                    const d = document.createElement('div'); d.className = "p-3 hover:bg-orange-50 cursor-pointer border-b text-sm font-medium flex justify-between";
+                    d.innerHTML = `<span><span class="text-orange-600 font-bold">${p.sku}</span> - ${p.nombre}</span> <span class="text-green-600 font-bold">$${p.precio}</span>`;
+                    d.onclick = () => { window.agregarAlCarrito(p); document.getElementById('venta_busqueda').value = ''; c.classList.add('hidden'); }; c.appendChild(d);
                 });
-            } else { contenedor.classList.add('hidden'); }
+            } else { c.classList.add('hidden'); }
+        };
+        document.addEventListener('click', (e) => { if(e.target.id !== 'venta_busqueda') document.getElementById('sugerencias_venta').classList.add('hidden'); });
+
+        window.agregarAlCarrito = (p) => {
+            if(p.stock <= 0) return alert(`⚠️ Agotado.`);
+            const ex = window.carrito.find(i => i.sku === p.sku);
+            if (ex) { if(ex.cantidad < p.stock) ex.cantidad++; else return alert("⚠️ Límite de stock."); } else { window.carrito.push({ ...p, cantidad: 1 }); }
+            window.mostrarNotificacion(`✅ ${p.nombre} agregado`); window.renderCarrito();
         };
 
-        document.addEventListener('click', (e) => { if (e.target.id !== 'venta_busqueda') document.getElementById('sugerencias_venta').classList.add('hidden'); });
-
-        window.agregarAlCarrito = (producto) => {
-            if(producto.stock <= 0) return alert(`⚠️ Agotado.`);
-            const itemExistente = window.carrito.find(item => item.sku === producto.sku);
-            if (itemExistente) {
-                if(itemExistente.cantidad < producto.stock) itemExistente.cantidad++;
-                else return alert("⚠️ Límite de stock alcanzado.");
-            } else {
-                window.carrito.push({ ...producto, cantidad: 1 });
-            }
-            window.mostrarNotificacion(`✅ ${producto.nombre} agregado`);
-            window.renderCarrito();
+        window.cambiarCantidadCarrito = (sku, val) => {
+            const cant = parseInt(val); const item = window.carrito.find(p => p.sku === sku);
+            if(item) { if(cant > item.stock) { alert(`Solo hay ${item.stock}.`); item.cantidad = item.stock; } else if(cant > 0) { item.cantidad = cant; } else { item.cantidad = 1; } window.renderCarrito(); }
         };
 
-        // Función para editar cantidad manualmente
-        window.cambiarCantidadCarrito = (sku, nuevaCant) => {
-            const cant = parseInt(nuevaCant);
-            const item = window.carrito.find(p => p.sku === sku);
-            if(item) {
-                if(cant > item.stock) {
-                    alert(`Solo hay ${item.stock} piezas disponibles.`);
-                    item.cantidad = item.stock;
-                } else if(cant > 0) {
-                    item.cantidad = cant;
-                } else {
-                    item.cantidad = 1; // Mínimo 1
-                }
-                window.renderCarrito();
-            }
-        };
-
-        window.quitarDelCarrito = (index) => { window.carrito.splice(index, 1); window.renderCarrito(); };
+        window.quitarDelCarrito = (i) => { window.carrito.splice(i, 1); window.renderCarrito(); };
 
         window.renderCarrito = () => {
-            const tbody = document.getElementById('tabla-carrito');
-            tbody.innerHTML = '';
-            let total = 0;
-
-            if (window.carrito.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-gray-400 py-4">El carrito está vacío</td></tr>';
-                document.getElementById('gran-total').innerText = "$0.00";
-                return;
-            }
-
-            window.carrito.forEach((item, index) => {
-                const subtotal = item.precio * item.cantidad;
-                total += subtotal;
-                // OJO: Input de cantidad editable agregado aquí
-                tbody.innerHTML += `
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="py-3 text-sm font-bold text-gray-700">${item.nombre}</td>
-                        <td class="py-3 text-center">
-                            <input type="number" min="1" max="${item.stock}" value="${item.cantidad}" onchange="cambiarCantidadCarrito('${item.sku}', this.value)" class="w-16 p-1 border rounded text-center focus:ring-2 focus:ring-orange-500 font-bold">
-                        </td>
-                        <td class="py-3 text-right text-green-600 font-bold">$${subtotal.toFixed(2)}</td>
-                        <td class="py-3 text-right">
-                            <button onclick="quitarDelCarrito(${index})" class="text-red-500 hover:bg-red-50 p-2 rounded">🗑️</button>
-                        </td>
-                    </tr>
-                `;
-            });
-            document.getElementById('gran-total').innerText = `$${total.toFixed(2)}`;
+            const tb = document.getElementById('tabla-carrito'); tb.innerHTML = ''; let t = 0;
+            if (window.carrito.length === 0) { tb.innerHTML = '<tr><td colspan="4" class="text-center text-gray-400 py-4">Carrito vacío</td></tr>'; document.getElementById('gran-total').innerText = "$0.00"; return; }
+            window.carrito.forEach((i, idx) => {
+                const sub = i.precio * i.cantidad; t += sub;
+                tb.innerHTML += `<tr class="border-b hover:bg-gray-50"><td class="py-3 text-sm font-bold text-gray-700">${i.nombre}</td><td class="py-3 text-center"><input type="number" min="1" max="${i.stock}" value="${i.cantidad}" onchange="cambiarCantidadCarrito('${i.sku}', this.value)" class="w-16 p-1 border rounded text-center focus:ring-2 font-bold"></td><td class="py-3 text-right text-green-600 font-bold">$${sub.toFixed(2)}</td><td class="py-3 text-right"><button onclick="quitarDelCarrito(${idx})" class="text-red-500 hover:bg-red-50 p-2 rounded">🗑️</button></td></tr>`;
+            }); document.getElementById('gran-total').innerText = `$${t.toFixed(2)}`;
         };
 
-        // TICKET E IFRAME
         window.procesarVentaCompleta = async () => {
             if (window.carrito.length === 0) return alert("Agrega productos.");
-            const btn = document.getElementById('btn-cobrar');
-            btn.disabled = true; btn.innerText = "Imprimiendo Ticket...";
-
-            const zona = document.getElementById('zonaSelect').value;
-            const empresa = localStorage.getItem('empresaId');
-            const usuario = localStorage.getItem('currentUser');
-            const ts = Date.now();
-            const fechaActual = new Date(ts).toLocaleString('es-MX');
-            const folio = "TK-" + ts.toString().slice(-6);
-            let totalVenta = 0;
-            let ticketFilas = "";
+            const btn = document.getElementById('btn-cobrar'); btn.disabled = true; btn.innerText = "Imprimiendo...";
+            const z = document.getElementById('zonaSelect').value; const e = localStorage.getItem('empresaId'); const u = localStorage.getItem('currentUser');
+            const ts = Date.now(); const f = new Date(ts).toLocaleString('es-MX'); const fol = "TK-" + ts.toString().slice(-6);
+            let tot = 0; let tkF = "";
 
             try {
-                for (const item of window.carrito) {
-                    const subtotal = item.precio * item.cantidad;
-                    totalVenta += subtotal;
-                    
-                    ticketFilas += `<tr><td style="padding:4px 0; border-bottom:1px dashed #ccc;">${item.cantidad}</td><td style="padding:4px 0; border-bottom:1px dashed #ccc;">${item.nombre.substring(0,18)}</td><td style="padding:4px 0; border-bottom:1px dashed #ccc; text-align:right;">$${subtotal.toFixed(2)}</td></tr>`;
-
-                    const ref = doc(db, `${empresa}_Inventario_${zona}`, item.sku);
-                    const d = await getDoc(ref);
+                for (const i of window.carrito) {
+                    const sub = i.precio * i.cantidad; tot += sub;
+                    tkF += `<tr><td style="padding:4px 0; border-bottom:1px dashed #ccc;">${i.cantidad}</td><td style="padding:4px 0; border-bottom:1px dashed #ccc;">${i.nombre.substring(0,18)}</td><td style="padding:4px 0; border-bottom:1px dashed #ccc; text-align:right;">$${sub.toFixed(2)}</td></tr>`;
+                    const ref = doc(db, `${e}_Inventario_${z}`, i.sku); const d = await getDoc(ref);
                     if (d.exists()) {
-                        await setDoc(ref, { stock: d.data().stock - item.cantidad }, { merge: true });
-                        await addDoc(collection(db, `${empresa}_Historial_Ventas`), {
-                            sku: item.sku, nombre: item.nombre, cantidad: item.cantidad, precioVenta: item.precio,
-                            zona: zona, usuario: usuario, fechaRegistro: fechaActual, timestamp: ts
-                        });
+                        await setDoc(ref, { stock: d.data().stock - i.cantidad }, { merge: true });
+                        await addDoc(collection(db, `${e}_Historial_Ventas`), { sku: i.sku, nombre: i.nombre, cantidad: i.cantidad, precioVenta: i.precio, zona: z, usuario: u, fechaRegistro: f, timestamp: ts });
                     }
                 }
-
-                // Generar HTML del Ticket
-                const htmlTicket = `
-                    <html><head><style>
-                        body { font-family: 'Courier New', monospace; font-size: 12px; color: black; margin: 0; padding: 10px; width: 80mm; }
-                        h2, p { margin: 2px 0; text-align: center; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                        th { border-bottom: 1px dashed black; text-align: left; }
-                    </style></head><body>
-                        <h2>BOOMBOX</h2>
-                        <p>Sucursal: ${zona}</p>
-                        <p>Folio: ${folio}</p>
-                        <p>Fecha: ${fechaActual}</p>
-                        <p>Le atendió: ${usuario}</p>
-                        <table>
-                            <thead><tr><th>Cant</th><th>Producto</th><th style="text-align:right;">Total</th></tr></thead>
-                            <tbody>${ticketFilas}</tbody>
-                        </table>
-                        <h3 style="text-align:right; margin-top:10px;">TOTAL: $${totalVenta.toFixed(2)}</h3>
-                        <p style="margin-top:15px; font-size:10px;">¡Gracias por su compra!</p>
-                    </body></html>
-                `;
-
-                // Usar Iframe para imprimir seguro
-                let iframe = document.getElementById('iframeImpresion');
-                if(!iframe) {
-                    iframe = document.createElement('iframe');
-                    iframe.id = 'iframeImpresion';
-                    iframe.style.display = 'none';
-                    document.body.appendChild(iframe);
-                }
-                iframe.contentWindow.document.open();
-                iframe.contentWindow.document.write(htmlTicket);
-                iframe.contentWindow.document.close();
-                
-                setTimeout(() => {
-                    iframe.contentWindow.focus();
-                    iframe.contentWindow.print();
-                    
-                    // Limpiar solo después de lanzar impresión
-                    window.carrito = []; window.renderCarrito(); window.cargarInventarioGeneral();
-                    btn.disabled = false; btn.innerText = "✅ Cobrar e Imprimir Ticket";
-                }, 500);
-
-            } catch(e) { 
-                alert("Error de conexión."); btn.disabled = false; btn.innerText = "✅ Cobrar e Imprimir Ticket"; 
-            } 
+                const htmlTk = `<html><head><style>body{font-family:'Courier New',monospace;font-size:12px;color:black;margin:0;padding:10px;width:80mm;}h2,p{margin:2px 0;text-align:center;}table{width:100%;border-collapse:collapse;margin-top:10px;}th{border-bottom:1px dashed black;text-align:left;}</style></head><body><h2>BOOMBOX</h2><p>Sucursal: ${z}</p><p>Folio: ${fol}</p><p>Fecha: ${f}</p><p>Atendió: ${u}</p><table><thead><tr><th>Cant</th><th>Prod</th><th style="text-align:right;">Total</th></tr></thead><tbody>${tkF}</tbody></table><h3 style="text-align:right;margin-top:10px;">TOTAL: $${tot.toFixed(2)}</h3><p style="margin-top:15px;font-size:10px;">¡Gracias por su compra!</p></body></html>`;
+                let ifr = document.getElementById('iframeImpresion'); if(!ifr) { ifr = document.createElement('iframe'); ifr.id = 'iframeImpresion'; ifr.style.display = 'none'; document.body.appendChild(ifr); }
+                ifr.contentWindow.document.open(); ifr.contentWindow.document.write(htmlTk); ifr.contentWindow.document.close();
+                setTimeout(() => { ifr.contentWindow.focus(); ifr.contentWindow.print(); window.carrito = []; window.renderCarrito(); window.cargarInventarioGeneral(); btn.disabled = false; btn.innerText = "✅ Cobrar e Imprimir Ticket"; }, 500);
+            } catch(er) { alert("Error."); btn.disabled = false; btn.innerText = "✅ Cobrar e Imprimir Ticket"; } 
         };
 
-        // MODAL DE EDICIÓN (DUEÑO/GERENTE)
-        window.abrirModalEdicion = (sku, nombre, costo, precio, stock) => {
-            document.getElementById('edit_sku').value = sku;
-            document.getElementById('edit_nom').value = nombre;
-            document.getElementById('edit_cos').value = costo;
-            document.getElementById('edit_pre').value = precio;
-            document.getElementById('edit_stk').value = stock;
-            document.getElementById('modalEdicion').classList.remove('hidden');
-        };
-
-        window.cerrarModalEdicion = () => {
-            document.getElementById('modalEdicion').classList.add('hidden');
-        };
-
+        // MODAL Y KARDEX
+        window.abrirModalEdicion = (sku, nom, cos, pre, stk) => { document.getElementById('edit_sku').value=sku; document.getElementById('edit_nom').value=nom; document.getElementById('edit_cos').value=cos; document.getElementById('edit_pre').value=pre; document.getElementById('edit_stk').value=stk; document.getElementById('modalEdicion').classList.remove('hidden'); };
+        window.cerrarModalEdicion = () => { document.getElementById('modalEdicion').classList.add('hidden'); };
         window.guardarEdicionProducto = async () => {
-            const sku = document.getElementById('edit_sku').value;
-            const nom = document.getElementById('edit_nom').value.trim();
-            const cos = parseFloat(document.getElementById('edit_cos').value);
-            const pre = parseFloat(document.getElementById('edit_pre').value);
-            const stk = parseInt(document.getElementById('edit_stk').value);
-            
-            if(!nom || isNaN(cos) || isNaN(pre) || isNaN(stk)) return alert("Revisa los datos numéricos.");
-
-            const zona = document.getElementById('zonaSelect').value;
-            const empresa = localStorage.getItem('empresaId');
-            const usuario = localStorage.getItem('currentUser');
-            const ts = Date.now();
-            const fechaActual = new Date(ts).toLocaleString('es-MX');
-
+            const sku = document.getElementById('edit_sku').value; const nom = document.getElementById('edit_nom').value.trim(); const cos = parseFloat(document.getElementById('edit_cos').value); const pre = parseFloat(document.getElementById('edit_pre').value); const stk = parseInt(document.getElementById('edit_stk').value);
+            if(!nom || isNaN(cos) || isNaN(pre) || isNaN(stk)) return alert("Revisa datos.");
+            const z = document.getElementById('zonaSelect').value; const e = localStorage.getItem('empresaId'); const u = localStorage.getItem('currentUser'); const ts = Date.now(); const f = new Date(ts).toLocaleString('es-MX');
             try {
-                // Actualizar producto
-                await setDoc(doc(db, `${empresa}_Inventario_${zona}`, sku), { 
-                    nombre: nom, costo: cos, precio: pre, stock: stk, ultimaModificacion: fechaActual 
-                }, { merge: true });
-
-                // Registrar el Ajuste en el Kardex (Historial Ingresos con etiqueta especial)
-                await addDoc(collection(db, `${empresa}_Historial_Ingresos`), {
-                    sku: sku, nombre: nom, cantidad: stk, zona: zona, usuario: usuario, 
-                    fechaRegistro: fechaActual, timestamp: ts, tipoMovimiento: "AJUSTE"
-                });
-
-                window.mostrarNotificacion("✅ Producto actualizado");
-                window.cerrarModalEdicion();
-                window.cargarInventarioGeneral();
-            } catch(e) { alert("Error al guardar cambios."); }
-        };
-
-        // INVENTARIO, VACIADO Y KARDEX
-        window.guardarProducto = async () => {
-            const sku = document.getElementById('p_sku').value.trim();
-            const nom = document.getElementById('p_nom').value.trim();
-            const cos = parseFloat(document.getElementById('p_cos').value);
-            const pre = parseFloat(document.getElementById('p_pre').value);
-            const stk = parseInt(document.getElementById('p_stk').value);
-            const zona = document.getElementById('zonaSelect').value;
-            const empresa = localStorage.getItem('empresaId');
-            const usuario = localStorage.getItem('currentUser');
-            const ts = Date.now();
-            const fechaActual = new Date(ts).toLocaleString('es-MX');
-
-            if(!sku || isNaN(stk) || isNaN(cos) || isNaN(pre)) return alert("Revisa los datos numéricos.");
-
-            try {
-                const ruta = `${empresa}_Inventario_${zona}`;
-                const d = await getDoc(doc(db, ruta, sku));
-                let sF = stk; if (d.exists()) sF += d.data().stock;
-
-                await setDoc(doc(db, ruta, sku), { sku, nombre: nom, costo: cos, precio: pre, stock: sF, zona });
-                await addDoc(collection(db, `${empresa}_Historial_Ingresos`), {
-                    sku: sku, nombre: nom, cantidad: stk, zona: zona, usuario: usuario, fechaRegistro: fechaActual, timestamp: ts, tipoMovimiento: "ENTRADA"
-                });
-
-                window.mostrarNotificacion("📦 Ingreso guardado");
-                ['p_sku', 'p_nom', 'p_cos', 'p_pre', 'p_stk'].forEach(id => document.getElementById(id).value = '');
-                window.cargarInventarioGeneral();
-            } catch (error) { alert("Error al guardar."); }
-        };
-
-        window.vaciarInventario = async () => {
-            const zona = document.getElementById('zonaSelect').value;
-            const pass = prompt(`ACCIÓN DESTRUCTIVA.\nSe borrará todo el inventario de: ${zona}\nIngresa tu contraseña para confirmar:`);
-            if(!pass) return;
-
-            const user = localStorage.getItem('currentUser');
-            const empresa = localStorage.getItem('empresaId');
-
-            try {
-                const userDoc = await getDoc(doc(db, "SaaS_Usuarios", user));
-                if(userDoc.exists() && userDoc.data().pass === pass) {
-                    if(confirm("¿Estás 100% seguro? NO se puede deshacer.")) {
-                        const snap = await getDocs(collection(db, `${empresa}_Inventario_${zona}`));
-                        snap.forEach(async (d) => { await deleteDoc(doc(db, `${empresa}_Inventario_${zona}`, d.id)); });
-                        alert("Inventario vaciado.");
-                        window.cargarInventarioGeneral();
-                    }
-                } else { alert("Contraseña incorrecta."); }
-            } catch(e) { alert("Error de conexión."); }
+                await setDoc(doc(db, `${e}_Inventario_${z}`, sku), { nombre: nom, costo: cos, precio: pre, stock: stk }, { merge: true });
+                await addDoc(collection(db, `${e}_Historial_Ingresos`), { sku, nombre: nom, cantidad: stk, zona: z, usuario: u, fechaRegistro: f, timestamp: ts, tipoMovimiento: "AJUSTE" });
+                window.mostrarNotificacion("✅ Actualizado"); window.cerrarModalEdicion(); window.cargarInventarioGeneral();
+            } catch(er) { alert("Error."); }
         };
 
         window.cargarInventarioGeneral = async () => {
-            const zonaActual = document.getElementById('zonaSelect').value;
-            if(!zonaActual) return;
-            const empresa = localStorage.getItem('empresaId');
-            const rol = localStorage.getItem('userRol');
-            const tbody = document.getElementById('tablaInventarioGeneralBody');
-            
-            tbody.innerHTML = "<tr><td colspan='6' class='p-4 text-center'>Cargando...</td></tr>";
-            let html = "";
-            window.inventarioLocal = []; 
-
+            const z = document.getElementById('zonaSelect').value; if(!z) return; const e = localStorage.getItem('empresaId'); const r = localStorage.getItem('userRol'); const tb = document.getElementById('tablaInventarioGeneralBody');
+            tb.innerHTML = "<tr><td colspan='6' class='p-4 text-center'>Cargando...</td></tr>"; let h = ""; window.inventarioLocal = []; 
             try {
-                const snapshot = await getDocs(collection(db, `${empresa}_Inventario_${zonaActual}`));
-                snapshot.forEach((doc) => {
-                    const p = doc.data();
-                    window.inventarioLocal.push(p);
-
-                    const colCosto = (rol === 'Dueño' || rol === 'Gerente') ? `<td class="p-3">$${p.costo}</td>` : ``;
-                    const colAccion = (rol === 'Dueño' || rol === 'Gerente') ? `<td class="p-3"><button onclick="abrirModalEdicion('${p.sku}', '${p.nombre}', ${p.costo}, ${p.precio}, ${p.stock})" class="text-blue-600 bg-blue-50 px-3 py-1 rounded font-bold hover:bg-blue-100 shadow-sm transition">✏️ Editar</button></td>` : ``;
-                    
-                    html += `<tr class="border-b hover:bg-gray-50">
-                            <td class="p-3 text-sm font-bold text-gray-500">${p.sku}</td>
-                            <td class="p-3 font-medium text-lg">${p.nombre}</td>
-                            <td class="p-3 font-black text-xl ${p.stock <= 0 ? 'text-red-500' : 'text-gray-800'}">${p.stock}</td>
-                            ${colCosto}<td class="p-3 text-green-600 font-bold">$${p.precio}</td>
-                            ${colAccion}</tr>`;
-                });
-                tbody.innerHTML = html || "<tr><td colspan='6' class='text-center'>Inventario Vacío</td></tr>";
-            } catch(e) { tbody.innerHTML = "<tr><td colspan='6' class='text-red-500'>Error de conexión</td></tr>"; }
+                const sn = await getDocs(collection(db, `${e}_Inventario_${z}`));
+                sn.forEach((d) => {
+                    const p = d.data(); window.inventarioLocal.push(p);
+                    const cc = (r === 'Dueño' || r === 'Gerente') ? `<td class="p-3">$${p.costo}</td>` : ``;
+                    const ca = (r === 'Dueño' || r === 'Gerente') ? `<td class="p-3"><button onclick="abrirModalEdicion('${p.sku}', '${p.nombre}', ${p.costo}, ${p.precio}, ${p.stock})" class="text-blue-600 bg-blue-50 px-3 py-1 rounded hover:bg-blue-100">✏️ Editar</button></td>` : ``;
+                    h += `<tr class="border-b hover:bg-gray-50"><td class="p-3 font-bold">${p.sku}</td><td class="p-3">${p.nombre}</td><td class="p-3 font-black ${p.stock<=0?'text-red-500':''}">${p.stock}</td>${cc}<td class="p-3 text-green-600 font-bold">$${p.precio}</td>${ca}</tr>`;
+                }); tb.innerHTML = h || "<tr><td colspan='6' class='text-center'>Vacío</td></tr>";
+            } catch(er) { tb.innerHTML = "<tr><td colspan='6' class='text-red-500'>Error</td></tr>"; }
         };
 
         window.cargarKardex = async () => {
-            const zona = document.getElementById('zonaSelect').value;
-            const empresa = localStorage.getItem('empresaId');
-            const tbody = document.getElementById('tablaKardexBody');
-            tbody.innerHTML = "<tr><td colspan='6' class='p-4 text-center'>Consultando base de datos...</td></tr>";
-
-            let movimientos = [];
+            const z = document.getElementById('zonaSelect').value; const e = localStorage.getItem('empresaId'); const tb = document.getElementById('tablaKardexBody');
+            tb.innerHTML = "<tr><td colspan='6' class='p-4 text-center'>Consultando...</td></tr>"; let movs = [];
             try {
-                const ingresosSnap = await getDocs(collection(db, `${empresa}_Historial_Ingresos`));
-                ingresosSnap.forEach(d => { 
-                    if(d.data().zona === zona) {
-                        const tipo = d.data().tipoMovimiento || 'ENTRADA'; // Si es edición es AJUSTE
-                        movimientos.push({...d.data(), tipo: tipo}); 
-                    }
-                });
-
-                const ventasSnap = await getDocs(collection(db, `${empresa}_Historial_Ventas`));
-                ventasSnap.forEach(d => { if(d.data().zona === zona) movimientos.push({...d.data(), tipo: 'SALIDA'}); });
-
-                movimientos.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-
-                let html = "";
-                movimientos.forEach(m => {
-                    let badgeColor = 'bg-gray-100 text-gray-700'; let icon = '⚙️';
-                    if(m.tipo === 'ENTRADA') { badgeColor = 'bg-green-100 text-green-700'; icon = '📦'; }
-                    if(m.tipo === 'SALIDA') { badgeColor = 'bg-red-100 text-red-700'; icon = '🛍️'; }
-                    if(m.tipo === 'AJUSTE') { badgeColor = 'bg-orange-100 text-orange-700'; icon = '✏️'; }
-
-                    html += `<tr class="border-b hover:bg-gray-50">
-                        <td class="p-3 text-xs text-gray-500">${m.fechaRegistro}</td>
-                        <td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${badgeColor}">${icon} ${m.tipo}</span></td>
-                        <td class="p-3 font-mono text-xs">${m.sku}</td>
-                        <td class="p-3 font-medium">${m.nombre}</td>
-                        <td class="p-3 font-bold">${m.cantidad}</td>
-                        <td class="p-3 text-gray-600">${m.usuario}</td>
-                    </tr>`;
-                });
-                tbody.innerHTML = html || "<tr><td colspan='6' class='text-center'>No hay movimientos registrados.</td></tr>";
-            } catch (e) { tbody.innerHTML = "<tr><td colspan='6' class='text-red-500 text-center'>Error al cargar el Kardex.</td></tr>"; }
+                const iSn = await getDocs(collection(db, `${e}_Historial_Ingresos`)); iSn.forEach(d => { if(d.data().zona === z) movs.push({...d.data(), tipo: d.data().tipoMovimiento || 'ENTRADA'}); });
+                const vSn = await getDocs(collection(db, `${e}_Historial_Ventas`)); vSn.forEach(d => { if(d.data().zona === z) movs.push({...d.data(), tipo: 'SALIDA'}); });
+                movs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                let h = "";
+                movs.forEach(m => {
+                    let bc = 'bg-gray-100 text-gray-700'; let ic = '⚙️';
+                    if(m.tipo === 'ENTRADA') { bc = 'bg-green-100 text-green-700'; ic = '📦'; } if(m.tipo === 'SALIDA') { bc = 'bg-red-100 text-red-700'; ic = '🛍️'; } if(m.tipo === 'AJUSTE') { bc = 'bg-orange-100 text-orange-700'; ic = '✏️'; }
+                    h += `<tr class="border-b hover:bg-gray-50"><td class="p-3 text-xs text-gray-500">${m.fechaRegistro}</td><td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${bc}">${ic} ${m.tipo}</span></td><td class="p-3 font-mono text-xs">${m.sku}</td><td class="p-3 font-medium">${m.nombre}</td><td class="p-3 font-bold">${m.cantidad}</td><td class="p-3 text-gray-600">${m.usuario}</td></tr>`;
+                }); tb.innerHTML = h || "<tr><td colspan='6' class='text-center'>No hay movimientos.</td></tr>";
+            } catch (e) { tb.innerHTML = "<tr><td colspan='6' class='text-red-500 text-center'>Error</td></tr>"; }
         };
 
-        // PARSEO XML / TXT
+        // INGRESOS Y GESTIÓN
+        window.guardarProducto = async () => {
+            const sku = document.getElementById('p_sku').value.trim(); const nom = document.getElementById('p_nom').value.trim(); const cos = parseFloat(document.getElementById('p_cos').value); const pre = parseFloat(document.getElementById('p_pre').value); const stk = parseInt(document.getElementById('p_stk').value);
+            const z = document.getElementById('zonaSelect').value; const e = localStorage.getItem('empresaId'); const u = localStorage.getItem('currentUser'); const ts = Date.now(); const f = new Date(ts).toLocaleString('es-MX');
+            if(!sku || isNaN(stk) || isNaN(cos) || isNaN(pre)) return alert("Revisa los datos.");
+            try {
+                const r = `${e}_Inventario_${z}`; const d = await getDoc(doc(db, r, sku)); let sF = stk; if (d.exists()) sF += d.data().stock;
+                await setDoc(doc(db, r, sku), { sku, nombre: nom, costo: cos, precio: pre, stock: sF, zona: z });
+                await addDoc(collection(db, `${e}_Historial_Ingresos`), { sku, nombre: nom, cantidad: stk, zona: z, usuario: u, fechaRegistro: f, timestamp: ts, tipoMovimiento: "ENTRADA" });
+                window.mostrarNotificacion("📦 Ingreso guardado"); ['p_sku', 'p_nom', 'p_cos', 'p_pre', 'p_stk'].forEach(id => document.getElementById(id).value = ''); window.cargarInventarioGeneral();
+            } catch (err) { alert("Error al guardar."); }
+        };
+
+        window.vaciarInventario = async () => {
+            const z = document.getElementById('zonaSelect').value;
+            const p = prompt(`Escribe la palabra VACIAR para confirmar que deseas borrar toda la zona ${z}:`);
+            if(p !== 'VACIAR') return alert("Operación cancelada.");
+            const e = localStorage.getItem('empresaId');
+            try {
+                const sn = await getDocs(collection(db, `${e}_Inventario_${z}`));
+                sn.forEach(async (d) => { await deleteDoc(doc(db, `${e}_Inventario_${z}`, d.id)); });
+                alert("Inventario vaciado."); window.cargarInventarioGeneral();
+            } catch(e) { alert("Error de conexión."); }
+        };
+
         window.procesarArchivoMasivo = function() {
-            const input = document.getElementById('archivoInventario');
-            const status = document.getElementById('statusCargaMasiva');
-            const zona = document.getElementById('zonaSelect').value;
-            const empresa = localStorage.getItem('empresaId');
-            const usuario = localStorage.getItem('currentUser');
-            
-            if (!input.files || input.files.length === 0) return;
-            const archivo = input.files[0];
-            const lector = new FileReader();
-            
-            status.classList.remove('hidden');
-            status.className = "mt-4 p-3 bg-blue-100 text-blue-700 text-sm rounded font-bold block";
-            status.innerText = "⏳ Leyendo archivo...";
-
-            lector.onload = async function(e) {
-                const contenido = e.target.result;
-                let procesados = 0;
-                const ts = Date.now();
-                const fecha = new Date(ts).toLocaleString('es-MX');
-
+            const i = document.getElementById('archivoInventario'); const s = document.getElementById('statusCargaMasiva'); const z = document.getElementById('zonaSelect').value; const e = localStorage.getItem('empresaId'); const u = localStorage.getItem('currentUser');
+            if (!i.files || i.files.length === 0) return; const a = i.files[0]; const l = new FileReader();
+            s.classList.remove('hidden'); s.className = "mt-4 p-3 bg-blue-100 text-blue-700 text-sm rounded font-bold block"; s.innerText = "⏳ Leyendo archivo...";
+            l.onload = async function(ev) {
+                const c = ev.target.result; let pr = 0; const ts = Date.now(); const f = new Date(ts).toLocaleString('es-MX');
                 try {
-                    if (archivo.name.endsWith('.xml')) {
-                        const xmlDoc = new DOMParser().parseFromString(contenido, "text/xml");
-                        const items = xmlDoc.getElementsByTagName("item");
-                        for (let i = 0; i < items.length; i++) {
-                            const item = items[i];
-                            const sku = item.getElementsByTagName("value0")[0]?.textContent?.trim() || "";
-                            if (!sku) continue;
-                            const nombre = item.getElementsByTagName("value1")[0]?.textContent?.trim() || "";
-                            const stock = parseInt(item.getElementsByTagName("value2")[0]?.textContent?.trim() || "0");
-                            const notasCostos = item.getElementsByTagName("value3")[0]?.textContent?.trim() || ""; 
-                            let costo = 0; let precio = 0;
-                            if(notasCostos) {
-                                const partes = notasCostos.split('?');
-                                const extraerNumero = (str) => { const m = str.match(/\d+(\.\d+)?/); return m ? parseFloat(m[0]) : 0; };
-                                costo = extraerNumero(partes[0]);
-                                precio = partes.length > 1 ? extraerNumero(partes[1]) : costo;
-                                if (precio === 0) precio = costo;
-                            }
-                            await setDoc(doc(db, `${empresa}_Inventario_${zona}`, sku), { sku, nombre, costo, precio, stock, zona });
-                            if(stock > 0) await addDoc(collection(db, `${empresa}_Historial_Ingresos`), { sku, nombre, cantidad: stock, zona, usuario, fechaRegistro: fecha, timestamp: ts, tipoMovimiento: "ENTRADA" });
-                            procesados++;
+                    if (a.name.endsWith('.xml')) {
+                        const xm = new DOMParser().parseFromString(c, "text/xml"); const it = xm.getElementsByTagName("item");
+                        for (let j = 0; j < it.length; j++) {
+                            const item = it[j]; const sku = item.getElementsByTagName("value0")[0]?.textContent?.trim() || ""; if (!sku) continue;
+                            const nom = item.getElementsByTagName("value1")[0]?.textContent?.trim() || ""; const stk = parseInt(item.getElementsByTagName("value2")[0]?.textContent?.trim() || "0"); const nC = item.getElementsByTagName("value3")[0]?.textContent?.trim() || ""; 
+                            let cos = 0; let pre = 0; if(nC) { const p = nC.split('?'); const eN = (str) => { const m = str.match(/\d+(\.\d+)?/); return m ? parseFloat(m[0]) : 0; }; cos = eN(p[0]); pre = p.length > 1 ? eN(p[1]) : cos; if (pre === 0) pre = cos; }
+                            await setDoc(doc(db, `${e}_Inventario_${z}`, sku), { sku, nombre: nom, costo: cos, precio: pre, stock: stk, zona: z });
+                            if(stk > 0) await addDoc(collection(db, `${e}_Historial_Ingresos`), { sku, nombre: nom, cantidad: stk, zona: z, usuario: u, fechaRegistro: f, timestamp: ts, tipoMovimiento: "ENTRADA" }); pr++;
                         }
-                    } else if (archivo.name.endsWith('.txt')) {
-                        const lineas = contenido.split('\n');
-                        for (let linea of lineas) {
-                            const col = linea.trim().split(',');
-                            if (col.length >= 5 && col[0].trim()) {
-                                const sku = col[0].trim(); const nombre = col[1].trim(); const stk = parseInt(col[4])||0;
-                                await setDoc(doc(db, `${empresa}_Inventario_${zona}`, sku), { sku, nombre, costo: parseFloat(col[2])||0, precio: parseFloat(col[3])||0, stock: stk, zona });
-                                if(stk > 0) await addDoc(collection(db, `${empresa}_Historial_Ingresos`), { sku, nombre, cantidad: stk, zona, usuario, fechaRegistro: fecha, timestamp: ts, tipoMovimiento: "ENTRADA" });
-                                procesados++;
-                            }
-                        }
+                    } else if (a.name.endsWith('.txt')) {
+                        const ln = c.split('\n');
+                        for (let li of ln) { const col = li.trim().split(','); if (col.length >= 5 && col[0].trim()) {
+                            const sku = col[0].trim(); const nom = col[1].trim(); const stk = parseInt(col[4])||0;
+                            await setDoc(doc(db, `${e}_Inventario_${z}`, sku), { sku, nombre: nom, costo: parseFloat(col[2])||0, precio: parseFloat(col[3])||0, stock: stk, zona: z });
+                            if(stk > 0) await addDoc(collection(db, `${e}_Historial_Ingresos`), { sku, nombre: nom, cantidad: stk, zona: z, usuario: u, fechaRegistro: f, timestamp: ts, tipoMovimiento: "ENTRADA" }); pr++;
+                        }}
                     }
-                    status.className = "mt-4 p-3 bg-green-100 text-green-700 text-sm rounded font-bold block";
-                    status.innerText = `✅ Éxito. Se sincronizaron ${procesados} productos.`;
-                    window.cargarInventarioGeneral();
-                } catch (error) { status.className = "mt-4 p-3 bg-red-100 text-red-700 text-sm rounded block"; status.innerText = "❌ Error procesando el archivo."; }
-            };
-            lector.readAsText(archivo);
+                    s.className = "mt-4 p-3 bg-green-100 text-green-700 text-sm rounded font-bold block"; s.innerText = `✅ Se sincronizaron ${pr} productos.`; window.cargarInventarioGeneral();
+                } catch (er) { s.className = "mt-4 p-3 bg-red-100 text-red-700 text-sm rounded block"; s.innerText = "❌ Error procesando."; }
+            }; l.readAsText(a);
         };
 
-        // GESTIÓN DE USUARIOS
-        window.crearUsuarioSecundario = async () => { /* Igual */ };
-        window.cargarUsuarios = async () => { /* Igual */ };
-        window.agregarNuevaZona = async () => { /* Igual */ };
+        window.crearUsuarioSecundario = async () => {
+            const u = document.getElementById('new_user').value.trim(); const email = document.getElementById('new_email').value.trim().toLowerCase(); const p = document.getElementById('new_pass').value.trim(); const r = document.getElementById('new_role').value; const emp = localStorage.getItem('empresaId'); const zn = JSON.parse(localStorage.getItem('zonas') || "[]");
+            if(!u || !p || !email) return alert("Faltan datos");
+            try {
+                await createUserWithEmailAndPassword(auth, email, p); await setDoc(doc(db, "SaaS_Directorio", u), { email: email }); await setDoc(doc(db, "SaaS_Usuarios", u), { empresaId: emp, rol: r, zonas: zn, usuario: u });
+                alert(`✅ Usuario ${u} creado.`); ['new_user', 'new_email', 'new_pass'].forEach(id => document.getElementById(id).value = ''); window.cargarUsuarios();
+            } catch(er) { alert("Error: " + er.message); }
+        };
+
+        window.cargarUsuarios = async () => {
+            const e = localStorage.getItem('empresaId'); const tb = document.getElementById('tablaUsuariosBody'); tb.innerHTML = '<tr><td colspan="3" class="text-center p-4">Cargando...</td></tr>';
+            try { const q = query(collection(db, "SaaS_Usuarios"), where("empresaId", "==", e)); const sn = await getDocs(q); let h = ''; sn.forEach(d => { const u = d.data(); h += `<tr class="border-b"><td class="p-3 font-bold">${u.usuario || d.id}</td><td class="p-3">${u.rol}</td><td class="p-3 text-gray-500">${u.zonas.join(', ')}</td></tr>`; }); tb.innerHTML = h || '<tr><td colspan="3" class="text-center p-4">Sin usuarios</td></tr>'; } catch(er) { tb.innerHTML = '<tr><td colspan="3" class="text-center text-red-500 p-4">Error</td></tr>'; }
+        };
+
+        window.agregarNuevaZona = async () => {
+            const nZ = prompt("Nombre de la nueva zona:");
+            if(nZ) { const u = localStorage.getItem('currentUser'); const z = JSON.parse(localStorage.getItem('zonas') || "[]"); if(!z.includes(nZ)) { z.push(nZ); await setDoc(doc(db, "SaaS_Usuarios", u), { zonas: z }, { merge: true }); localStorage.setItem('zonas', JSON.stringify(z)); iniciarApp(); } }
+        };
         
         window.onload = () => { if(localStorage.getItem('currentUser')) iniciarApp(); };
     </script>
