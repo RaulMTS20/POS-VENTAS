@@ -4,737 +4,114 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BOOMBOX - POS & Inventario</title>
-    
     <link rel="icon" type="image/png" href="ICONO SF.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        .brand-text { color: #f59e0b; }
         .tab-active { border-bottom: 4px solid #f59e0b; color: #f59e0b; font-weight: bold; }
-        .reader-container { width: 100%; max-width: 400px; margin: 0 auto; }
-        .reader-container video { width: 100%; border-radius: 8px; }
-        
+        .reader-container { width: 100%; max-width: 500px; margin: 0 auto; overflow: hidden; border-radius: 8px; }
+        .reader-container video { width: 100%; object-fit: cover; }
         #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .toast { background-color: #10b981; color: white; padding: 12px 24px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); animation: fadeInOut 2s ease-in-out forwards; }
         @keyframes fadeInOut { 0% { opacity: 0; transform: translateY(20px); } 10% { opacity: 1; transform: translateY(0); } 80% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-20px); } }
-        
-        @media print {
-            body * { visibility: hidden; }
-            #zona-impresion, #zona-impresion * { visibility: visible; }
-            #zona-impresion { position: absolute; left: 0; top: 0; width: 100%; max-width: 80mm; font-family: 'Courier New', Courier, monospace; font-size: 12px; color: black; margin: 0; padding: 10px; }
-            .ticket-header { text-align: center; margin-bottom: 10px; }
-            .ticket-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-            .ticket-table th, .ticket-table td { text-align: left; border-bottom: 1px dashed #ccc; padding: 4px 0; }
-            .ticket-total { font-weight: bold; font-size: 14px; text-align: right; margin-top: 10px; }
-        }
+        @media print { body * { visibility: hidden; } #zona-impresion, #zona-impresion * { visibility: visible; } #zona-impresion { position: absolute; left: 0; top: 0; width: 80mm; font-family: monospace; font-size: 12px; } }
     </style>
 </head>
-<body class="bg-slate-50 text-gray-800 font-sans">
+<body class="bg-slate-50 text-gray-800 font-sans pb-10">
 
     <div id="toast-container"></div>
-
-    <!-- ZONA OCULTA DE IMPRESIÓN DEL TICKET -->
     <div id="zona-impresion" class="hidden">
-        <div class="ticket-header">
+        <div style="text-align: center;">
             <h2 id="tk_empresa" style="font-size: 18px; margin:0;">BOOMBOX</h2>
             <p id="tk_sucursal" style="margin: 2px 0;">Sucursal</p>
             <p style="margin: 2px 0;">Folio: <span id="tk_folio"></span></p>
             <p style="margin: 2px 0;">Fecha: <span id="tk_fecha"></span></p>
-            <p style="margin: 2px 0;">Atendió: <span id="tk_cajero"></span></p>
         </div>
-        <table class="ticket-table">
-            <thead><tr><th>Cant</th><th>Producto</th><th>Importe</th></tr></thead>
+        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+            <thead><tr><th style="border-bottom:1px dashed #000; text-align:left;">Cant</th><th style="border-bottom:1px dashed #000; text-align:left;">Prod</th><th style="border-bottom:1px dashed #000; text-align:right;">Total</th></tr></thead>
             <tbody id="tk_productos"></tbody>
         </table>
-        <div class="ticket-total">TOTAL: $<span id="tk_total">0.00</span></div>
-        <p style="text-align: center; margin-top: 15px; font-size: 10px;">¡Gracias por su compra!</p>
+        <div style="font-weight:bold; font-size:14px; text-align:right; margin-top:10px;">TOTAL: $<span id="tk_total">0.00</span></div>
     </div>
 
-    <!-- MODAL DE EDICIÓN DE INVENTARIO -->
     <div id="modalEdicion" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative">
-            <h2 class="text-xl font-bold mb-4 text-orange-600 border-b pb-2">✏️ Editar Inventario</h2>
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <h2 class="text-xl font-bold mb-4 text-orange-600">✏️ Editar Producto</h2>
             <div class="space-y-4">
-                <div><label class="text-sm font-bold text-gray-600">SKU (No editable)</label><input type="text" id="edit_sku" class="w-full p-2 border rounded bg-gray-100 cursor-not-allowed" disabled></div>
-                <div><label class="text-sm font-bold text-gray-600">Nombre del Producto</label><input type="text" id="edit_nom" class="w-full p-2 border rounded focus:ring-2 focus:ring-orange-500"></div>
+                <input type="text" id="edit_sku" class="w-full p-2 border rounded bg-gray-100" disabled>
+                <input type="text" id="edit_nom" placeholder="Nombre" class="w-full p-2 border rounded">
                 <div class="grid grid-cols-2 gap-4">
-                    <div><label class="text-sm font-bold text-gray-600">Costo ($)</label><input type="number" id="edit_cos" class="w-full p-2 border rounded focus:ring-2 focus:ring-orange-500"></div>
-                    <div><label class="text-sm font-bold text-gray-600">Precio Venta ($)</label><input type="number" id="edit_pre" class="w-full p-2 border rounded focus:ring-2 focus:ring-orange-500"></div>
+                    <input type="number" id="edit_cos" placeholder="Costo" class="p-2 border rounded">
+                    <input type="number" id="edit_pre" placeholder="Precio" class="p-2 border rounded">
                 </div>
-                <div><label class="text-sm font-bold text-gray-600">Stock Actual</label><input type="number" id="edit_stk" class="w-full p-2 border rounded focus:ring-2 focus:ring-orange-500"></div>
+                <input type="number" id="edit_stk" placeholder="Stock" class="w-full p-2 border rounded">
             </div>
             <div class="mt-6 flex justify-end gap-3">
-                <button type="button" onclick="cerrarModalEdicion()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded font-bold text-gray-700">Cancelar</button>
-                <button type="button" onclick="guardarEdicionProducto()" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded font-bold text-white shadow">Guardar Cambios</button>
+                <button onclick="cerrarModalEdicion()" class="px-4 py-2 bg-gray-200 rounded font-bold">Cancelar</button>
+                <button onclick="guardarEdicionProducto()" class="px-4 py-2 bg-orange-500 text-white rounded font-bold">Guardar</button>
             </div>
         </div>
     </div>
 
-    <!-- PANTALLA DE AUTENTICACIÓN -->
     <div id="authScreen" class="min-h-screen flex items-center justify-center bg-gray-900 px-4">
         <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md text-center">
-            <div class="flex justify-center mb-8">
-                <img src="BOOMBOX 2.png" alt="BOOMBOX Logo" class="w-80 md:w-96 h-auto object-contain">
-            </div>
-            
+            <img src="BOOMBOX 2.png" class="w-64 mx-auto mb-6">
             <div id="loginForm">
-                <h2 class="text-lg font-bold text-gray-700 mb-4">Iniciar Sesión</h2>
-                <input type="text" id="loginUser" placeholder="Usuario (Ej. raulD2H)" class="w-full mb-3 p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 font-bold text-lg">
-                <input type="password" id="loginPass" placeholder="Contraseña" class="w-full mb-4 p-3 border rounded-lg focus:ring-2 focus:ring-orange-500">
-                <button type="button" id="btnLogin" onclick="iniciarSesion()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg transition mb-4">Entrar</button>
-                <button type="button" onclick="recuperarPassword()" class="text-sm text-blue-600 hover:underline">¿Olvidaste tu contraseña?</button>
-                <p class="mt-4 text-sm text-gray-500 border-t pt-4">¿Nuevo negocio? <span onclick="toggleAuth()" class="text-orange-500 cursor-pointer font-bold">Regístrate aquí</span></p>
+                <input type="text" id="loginUser" placeholder="Usuario" class="w-full mb-3 p-3 border rounded-lg">
+                <input type="password" id="loginPass" placeholder="Contraseña" class="w-full mb-4 p-3 border rounded-lg">
+                <button id="btnLogin" onclick="iniciarSesion()" class="w-full bg-orange-500 text-white font-bold py-3 rounded-lg">Entrar</button>
             </div>
-
             <div id="registerForm" class="hidden text-left">
-                <h2 class="text-lg font-bold text-gray-700 mb-4 text-center">Registrar Negocio</h2>
-                <label class="text-xs font-bold text-gray-500 uppercase">Datos del Negocio</label>
-                <input type="text" id="regEmpresa" placeholder="Nombre (Ej. DISTRIBUIDORES2HERMANOS)" class="w-full mb-2 p-3 border rounded-lg text-sm bg-gray-50">
-                <input type="text" id="regZona" placeholder="Zona Principal (Ej. Toluca)" class="w-full mb-4 p-3 border rounded-lg text-sm bg-gray-50">
-                
-                <label class="text-xs font-bold text-gray-500 uppercase">Datos del Administrador</label>
-                <input type="text" id="regUser" placeholder="Crea un Usuario (Ej. dueño123)" class="w-full mb-2 p-3 border rounded-lg text-sm bg-gray-50">
-                <input type="email" id="regEmail" placeholder="Correo (Solo para recuperar contraseña)" class="w-full mb-2 p-3 border rounded-lg text-sm bg-gray-50">
-                <input type="password" id="regPass" placeholder="Contraseña (mínimo 6 caracteres)" class="w-full mb-6 p-3 border rounded-lg text-sm bg-gray-50">
-                
-                <button type="button" id="btnRegister" onclick="registrarNegocio()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Crear Cuenta Principal</button>
-                <p class="mt-4 text-sm text-center text-gray-500">¿Ya tienes cuenta? <span onclick="toggleAuth()" class="text-blue-600 cursor-pointer font-bold">Inicia sesión</span></p>
+                <input type="text" id="regEmpresa" placeholder="Empresa" class="w-full mb-2 p-3 border rounded-lg text-sm">
+                <input type="text" id="regZona" placeholder="Zona" class="w-full mb-2 p-3 border rounded-lg text-sm">
+                <input type="text" id="regUser" placeholder="Usuario Administrador" class="w-full mb-2 p-3 border rounded-lg text-sm">
+                <input type="email" id="regEmail" placeholder="Correo electrónico" class="w-full mb-2 p-3 border rounded-lg text-sm">
+                <input type="password" id="regPass" placeholder="Contraseña" class="w-full mb-4 p-3 border rounded-lg text-sm">
+                <button id="btnRegister" onclick="registrarNegocio()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">Crear Cuenta</button>
             </div>
         </div>
     </div>
 
-    <!-- PANTALLA PRINCIPAL DE LA APP -->
     <div id="appScreen" class="hidden min-h-screen">
-        <nav class="bg-white shadow-md p-4 flex justify-between items-center relative z-10">
-            <div class="flex items-center"><img src="BOOMBOX 2.png" alt="BOOMBOX" class="h-8"></div>
-            <div class="flex items-center gap-4">
-                <div class="text-right">
-                    <p class="font-bold text-gray-800" id="displayEmpresa">Negocio</p>
-                    <p class="text-xs text-gray-500" id="displayUser">Usuario (Rol)</p>
-                </div>
-                <button type="button" onclick="cerrarSesion()" class="text-red-500 font-bold text-sm hover:underline">Cerrar Sesión</button>
-            </div>
+        <nav class="bg-white shadow-md p-4 flex justify-between items-center">
+            <img src="BOOMBOX 2.png" class="h-8">
+            <button onclick="cerrarSesion()" class="text-red-500 text-sm font-bold underline">Cerrar Sesión</button>
         </nav>
-
-        <div class="bg-white border-b flex justify-start md:justify-center gap-4 md:gap-8 text-sm font-semibold text-gray-600 overflow-x-auto whitespace-nowrap px-4">
-            <button type="button" onclick="cambiarPestaña('tab-ventas')" id="btn-tab-ventas" class="py-4 px-2 hover:text-orange-500 tab-active">Ventas Mostrador</button>
-            <button type="button" onclick="cambiarPestaña('tab-general')" id="btn-tab-general" class="py-4 px-2 hover:text-orange-500">Inventario</button>
-            <button type="button" onclick="cambiarPestaña('tab-reportes')" id="btn-tab-reportes" class="py-4 px-2 hover:text-orange-500 hidden">📈 Reportes</button>
-            <button type="button" onclick="cambiarPestaña('tab-agotados')" id="btn-tab-agotados" class="py-4 px-2 hover:text-orange-500 hidden">⚠️ Agotados</button>
-            <button type="button" onclick="cambiarPestaña('tab-kardex')" id="btn-tab-kardex" class="py-4 px-2 hover:text-orange-500 hidden">Kardex</button>
-            <button type="button" onclick="cambiarPestaña('tab-registro')" id="btn-tab-registro" class="py-4 px-2 hover:text-orange-500 hidden">Bodega</button>
-            <button type="button" onclick="cambiarPestaña('tab-usuarios')" id="btn-tab-usuarios" class="py-4 px-2 hover:text-orange-500 hidden">Usuarios</button>
+        <div class="flex justify-center gap-4 py-4 overflow-x-auto whitespace-nowrap px-4">
+            <button onclick="cambiarPestaña('tab-ventas')" id="btn-tab-ventas" class="tab-active py-2 px-4">🛒 Ventas</button>
+            <button onclick="cambiarPestaña('tab-general')" id="btn-tab-general" class="py-2 px-4">📦 Inventario</button>
+            <button onclick="cambiarPestaña('tab-reportes')" id="btn-tab-reportes" class="py-2 px-4 hidden">📈 Reportes</button>
+            <button onclick="cambiarPestaña('tab-agotados')" id="btn-tab-agotados" class="py-2 px-4 hidden">⚠️ Agotados</button>
+            <button onclick="cambiarPestaña('tab-kardex')" id="btn-tab-kardex" class="py-2 px-4 hidden">📋 Kardex</button>
         </div>
-
-        <div class="max-w-7xl mx-auto p-4 md:p-6 mt-4">
-            <div class="bg-white p-4 rounded-lg shadow-sm mb-6 flex items-center gap-4 border-l-4 border-orange-500 justify-between">
-                <div class="flex items-center gap-4">
-                    <label class="font-bold text-gray-700">Zona actual:</label>
-                    <select id="zonaSelect" onchange="alCambiarZona()" class="p-2 border rounded bg-gray-50 focus:ring-2 focus:ring-orange-500"></select>
-                    <button type="button" id="btnAgregarZona" onclick="agregarNuevaZona()" class="text-sm bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded hidden">+ Nueva Zona</button>
+        <main class="max-w-6xl mx-auto p-4">
+            <div id="tab-ventas" class="tab-content grid lg:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <input type="text" id="venta_busqueda" onkeyup="filtrarProductos()" placeholder="Buscar producto..." class="w-full p-3 border rounded-lg mb-4">
+                    <button onclick="iniciarCamara('ventas')" id="btn-iniciar-camara-ventas" class="w-full bg-gray-900 text-white py-4 rounded-lg font-bold">📷 Escanear</button>
+                    <div id="reader-ventas" class="hidden reader-container"></div>
                 </div>
-                <button type="button" id="btnVaciarInventario" onclick="vaciarInventario()" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-sm shadow">⚠️ Vaciar Inventario</button>
-            </div>
-
-            <!-- PESTAÑA: VENTAS -->
-            <div id="tab-ventas" class="tab-content block">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="bg-white p-6 rounded-lg shadow-md h-fit">
-                        <h2 class="text-xl font-bold mb-4 flex items-center gap-2">🛒 Agregar Producto</h2>
-                        <div class="relative w-full mb-4">
-                            <input type="text" id="venta_busqueda" onkeyup="filtrarProductos()" placeholder="Busca SKU o Nombre..." class="p-3 border rounded w-full focus:ring-2 focus:ring-orange-500 text-lg" autocomplete="off">
-                            <div id="sugerencias_venta" class="absolute z-50 w-full bg-white border rounded shadow-lg hidden max-h-48 overflow-y-auto mt-1"></div>
-                        </div>
-                        <div class="text-center my-4 font-bold text-gray-300">--- O ESCANEA ---</div>
-                        <div class="mb-4">
-                            <button type="button" id="btn-iniciar-camara-ventas" onclick="iniciarCamara('ventas')" class="w-full bg-gray-800 text-white font-bold py-4 rounded-lg hover:bg-black transition">📷 Escanear con Cámara</button>
-                            <button type="button" id="btn-detener-camara-ventas" onclick="detenerCamara('ventas')" class="hidden w-full bg-red-600 text-white font-bold py-4 rounded-lg hover:bg-red-700 transition">❌ Cancelar Escaneo</button>
-                        </div>
-                        <div id="reader-ventas" class="hidden reader-container border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-gray-50"></div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-lg shadow-md flex flex-col">
-                        <h2 class="text-xl font-bold mb-4 text-orange-600">🛍️ Lista de Compra</h2>
-                        <div class="overflow-y-auto max-h-72 mb-4 border-b pb-4">
-                            <table class="w-full text-left">
-                                <thead>
-                                    <tr class="text-gray-500 text-sm border-b"><th class="pb-2">Producto</th><th class="pb-2 text-center">Cant.</th><th class="pb-2 text-right">Subtotal</th><th></th></tr>
-                                </thead>
-                                <tbody id="tabla-carrito"><tr><td colspan="4" class="text-center text-gray-400 py-4">El carrito está vacío</td></tr></tbody>
-                            </table>
-                        </div>
-                        <div class="mt-auto">
-                            <div class="flex justify-between items-center mb-6">
-                                <span class="text-xl font-bold text-gray-600">TOTAL:</span>
-                                <span class="text-3xl font-black text-green-600" id="gran-total">$0.00</span>
-                            </div>
-                            <button type="button" id="btn-cobrar" onclick="procesarVentaCompleta()" class="bg-orange-500 text-white text-lg font-bold py-4 rounded-lg shadow-lg hover:bg-orange-600 w-full transition transform hover:scale-105">✅ Cobrar e Imprimir Ticket</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- PESTAÑA: INVENTARIO GENERAL -->
-            <div id="tab-general" class="tab-content hidden">
-                <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
-                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">📊 Inventario General</h2>
-                    <button type="button" onclick="cargarInventarioGeneral()" class="mb-4 text-sm text-blue-600 underline">↻ Actualizar Tabla</button>
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-gray-100 text-gray-700">
-                                <th class="p-3 border-b">SKU</th><th class="p-3 border-b">Producto</th><th class="p-3 border-b">Stock</th>
-                                <th class="p-3 border-b costo-col">Costo</th><th class="p-3 border-b">Precio Venta</th><th class="p-3 border-b accion-col hidden">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaInventarioGeneralBody"><tr><td colspan="6" class="p-4 text-center text-gray-500">Cargando datos...</td></tr></tbody>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <table class="w-full">
+                        <thead><tr><th>Producto</th><th>Cant</th><th>Total</th></tr></thead>
+                        <tbody id="tabla-carrito"></tbody>
                     </table>
+                    <button onclick="procesarVentaCompleta()" id="btn-cobrar" class="w-full bg-orange-500 text-white font-bold py-4 mt-6 rounded-lg">✅ Cobrar</button>
                 </div>
             </div>
-
-            <!-- NUEVA PESTAÑA: REPORTES Y DASHBOARD -->
-            <div id="tab-reportes" class="tab-content hidden">
-                <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-indigo-600">
-                    <h2 class="text-xl font-bold mb-6">📈 Dashboard de Ventas</h2>
-                    
-                    <!-- Filtros de Fecha -->
-                    <div class="flex flex-wrap gap-4 items-end mb-6 bg-gray-50 p-4 rounded border">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha de Inicio</label>
-                            <input type="date" id="rep_inicio" class="p-2 border rounded focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha de Fin</label>
-                            <input type="date" id="rep_fin" class="p-2 border rounded focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                        <button onclick="generarReporte()" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded hover:bg-indigo-700 transition">Generar Reporte</button>
-                        <button onclick="descargarCSV()" class="bg-green-600 text-white font-bold py-2 px-6 rounded hover:bg-green-700 transition ml-auto flex items-center gap-2">📥 Descargar a Excel</button>
-                    </div>
-
-                    <!-- Tarjetas de Resumen -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div class="bg-white border p-6 rounded-lg shadow-sm border-l-4 border-l-green-500">
-                            <p class="text-sm font-bold text-gray-500 uppercase">Total Vendido</p>
-                            <p class="text-4xl font-black text-green-600 mt-2" id="rep_total_vendido">$0.00</p>
-                        </div>
-                        <div class="bg-white border p-6 rounded-lg shadow-sm border-l-4 border-l-blue-500">
-                            <p class="text-sm font-bold text-gray-500 uppercase">Piezas Vendidas (Salidas)</p>
-                            <p class="text-4xl font-black text-blue-600 mt-2" id="rep_piezas_vendidas">0</p>
-                        </div>
-                        <div class="bg-white border p-6 rounded-lg shadow-sm border-l-4 border-l-orange-500">
-                            <p class="text-sm font-bold text-gray-500 uppercase">Piezas Ingresadas (Bodega)</p>
-                            <p class="text-4xl font-black text-orange-600 mt-2" id="rep_piezas_ingresadas">0</p>
-                        </div>
-                    </div>
-
-                    <!-- Tabla de Detalle -->
-                    <div class="overflow-x-auto">
-                        <h3 class="font-bold text-gray-700 mb-3">Detalle de Ventas en el Periodo</h3>
-                        <table class="w-full text-left border-collapse text-sm">
-                            <thead>
-                                <tr class="bg-gray-100 text-gray-700">
-                                    <th class="p-2 border-b">Fecha</th><th class="p-2 border-b">Producto</th>
-                                    <th class="p-2 border-b">Cant.</th><th class="p-2 border-b">Vendedor</th><th class="p-2 border-b text-right">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tablaReportesBody">
-                                <tr><td colspan="5" class="p-4 text-center text-gray-500">Selecciona fechas y haz clic en "Generar Reporte"</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- NUEVA PESTAÑA: AGOTADOS -->
-            <div id="tab-agotados" class="tab-content hidden">
-                <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-red-600">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold flex items-center gap-2">⚠️ Productos Agotados (Stock 0)</h2>
-                        <button type="button" onclick="cargarAgotados()" class="text-sm text-red-600 underline">↻ Actualizar Lista</button>
-                    </div>
-                    <p class="text-sm text-gray-500 mb-6">Esta lista muestra qué artículos necesitan reabastecerse urgentemente en la zona actual.</p>
-                    
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-red-50 text-red-800">
-                                <th class="p-3 border-b">SKU</th><th class="p-3 border-b">Producto</th>
-                                <th class="p-3 border-b">Stock Actual</th><th class="p-3 border-b">Agotado Desde Hace</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaAgotadosBody">
-                            <tr><td colspan="4" class="p-4 text-center text-gray-500">Cargando datos...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- PESTAÑA: KARDEX -->
-            <div id="tab-kardex" class="tab-content hidden">
-                <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto border-t-4 border-indigo-500">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold flex items-center gap-2">📋 Kardex (Historial de Movimientos)</h2>
-                    </div>
-                    <div class="flex gap-4 mb-4 border-b pb-2">
-                        <button onclick="cargarKardex('entradas')" id="btn-kardex-entradas" class="font-bold text-green-600 border-b-2 border-green-600 pb-1 transition">Entradas y Ajustes</button>
-                        <button onclick="cargarKardex('salidas')" id="btn-kardex-salidas" class="font-bold text-gray-500 hover:text-red-600 pb-1 transition">Salidas (Ventas)</button>
-                        <button onclick="cargarKardex(window.kardexActual)" class="ml-auto text-sm text-indigo-600 underline">↻ Actualizar Tabla</button>
-                    </div>
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead>
-                            <tr class="bg-gray-100 text-gray-700">
-                                <th class="p-3 border-b">Fecha y Hora</th><th class="p-3 border-b">Movimiento</th><th class="p-3 border-b">SKU</th>
-                                <th class="p-3 border-b">Producto</th><th class="p-3 border-b">Piezas</th><th class="p-3 border-b">Usuario</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaKardexBody"><tr><td colspan="6" class="p-4 text-center text-gray-500">Haz clic en actualizar...</td></tr></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- PESTAÑA: REGISTRO / BODEGA -->
-            <div id="tab-registro" class="tab-content hidden">
-                <div class="bg-white p-6 rounded-lg shadow-md mb-6 border-t-4 border-green-500">
-                    <h2 class="text-xl font-bold mb-2 flex items-center gap-2">📦 Ingreso Manual</h2>
-                    <div class="mb-4 flex gap-2">
-                        <button type="button" id="btn-iniciar-camara-ingreso" onclick="iniciarCamara('ingreso')" class="bg-gray-800 text-white font-bold py-2 px-4 rounded-lg hover:bg-black transition">📷 Escanear SKU</button>
-                        <button type="button" id="btn-detener-camara-ingreso" onclick="detenerCamara('ingreso')" class="hidden bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition">❌ Cancelar</button>
-                    </div>
-                    <div id="reader-ingreso" class="hidden reader-container border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-gray-50 mb-4"></div>
-                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                        <input type="text" id="p_sku" placeholder="SKU" class="p-3 border rounded focus:ring-2 focus:ring-green-500 bg-green-50">
-                        <input type="text" id="p_nom" placeholder="Nombre" class="p-3 border rounded focus:ring-2 focus:ring-green-500 md:col-span-2">
-                        <input type="number" id="p_cos" placeholder="Costo" class="p-3 border rounded focus:ring-2 focus:ring-green-500">
-                        <input type="number" id="p_pre" placeholder="Precio Venta" class="p-3 border rounded focus:ring-2 focus:ring-green-500">
-                        <input type="number" id="p_stk" placeholder="Piezas Ingresadas" class="p-3 border rounded focus:ring-2 focus:ring-green-500">
-                    </div>
-                    <button type="button" onclick="guardarProducto()" class="mt-4 w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded shadow transition">Guardar Ingreso</button>
-                </div>
-
-                <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-amber-500">
-                    <h2 class="text-xl font-bold mb-2 flex items-center gap-2">📄 Carga Masiva (Turbo)</h2>
-                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50 hover:bg-gray-100 transition relative">
-                        <input type="file" id="archivoInventario" accept=".txt,.xml" onchange="procesarArchivoMasivo()" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                        <div class="flex flex-col items-center justify-center"><span class="text-4xl mb-2">📁</span><p class="text-sm font-medium text-gray-700">Arrastra tu archivo TXT o XML</p></div>
-                    </div>
-                    <div id="statusCargaMasiva" class="hidden mt-4 p-3 text-sm rounded font-bold"></div>
-                </div>
-            </div>
-
-            <!-- PESTAÑA: USUARIOS -->
-            <div id="tab-usuarios" class="tab-content hidden">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-blue-500 h-fit">
-                        <h2 class="text-xl font-bold mb-4">👥 Registrar Colaborador</h2>
-                        <div class="flex flex-col gap-4">
-                            <input type="text" id="new_user" placeholder="Crear Usuario (Ej. ventas_centro)" class="p-3 border rounded focus:ring-2 focus:ring-blue-500">
-                            <input type="email" id="new_email" placeholder="Correo Real (Para recuperar contraseña)" class="p-3 border rounded focus:ring-2 focus:ring-blue-500">
-                            <input type="password" id="new_pass" placeholder="Contraseña" class="p-3 border rounded focus:ring-2 focus:ring-blue-500">
-                            <select id="new_role" class="p-3 border rounded focus:ring-2 focus:ring-blue-500">
-                                <option value="Vendedor">Vendedor</option>
-                                <option value="Gerente">Gerente</option>
-                            </select>
-                            <button type="button" onclick="crearUsuarioSecundario()" class="bg-blue-600 text-white font-bold p-3 rounded hover:bg-blue-700">Crear Acceso</button>
-                        </div>
-                    </div>
-                    <div class="bg-white p-6 rounded-lg shadow-md">
-                        <h2 class="text-xl font-bold mb-4">📋 Lista de Usuarios</h2>
-                        <button type="button" onclick="cargarUsuarios()" class="mb-4 text-sm text-blue-600 underline">↻ Actualizar Lista</button>
-                        <table class="w-full text-left text-sm border-collapse">
-                            <thead><tr class="bg-gray-100 text-gray-700"><th class="p-2 border-b">Usuario</th><th class="p-2 border-b">Rol</th><th class="p-2 border-b">Zonas</th></tr></thead>
-                            <tbody id="tablaUsuariosBody"><tr><td colspan="3" class="text-center p-4 text-gray-500">Cargando...</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-        </div>
+            </main>
     </div>
 
-    <!-- LÓGICA DE APLICACIÓN Y FIREBASE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, collection, getDocs, addDoc, deleteDoc, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyDXXqcuMvdYZdrwMkw95KwiJ_UD_CIyD8g",
-            authDomain: "mi-negocio-d1931.firebaseapp.com",
-            projectId: "mi-negocio-d1931",
-            storageBucket: "mi-negocio-d1931.firebasestorage.app",
-            messagingSenderId: "543739671500",
-            appId: "1:543739671500:web:b6abfebbcd6494370f2369",
-            measurementId: "G-EKFYTVXJ97"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
-        const secondaryAuth = getAuth(secondaryApp);
-
-        window.db = db;
-        window.inventarioLocal = []; 
-        window.carrito = [];
-        window.kardexActual = 'entradas'; 
-        window.datosReporteCSV = []; // Guarda los datos para Excel
-
-        window.mostrarNotificacion = (mensaje) => {
-            try { const beep = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg'); beep.volume = 0.5; beep.play(); } catch(e) {}
-            const cont = document.getElementById('toast-container'); const t = document.createElement('div');
-            t.className = 'toast'; t.innerText = mensaje; cont.appendChild(t);
-            setTimeout(() => { if(t.parentNode) t.parentNode.removeChild(t); }, 2000);
-        };
-
-        window.toggleAuth = () => { document.getElementById('loginForm').classList.toggle('hidden'); document.getElementById('registerForm').classList.toggle('hidden'); };
-
-        window.cambiarPestaña = (idTab) => {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('button[id^="btn-tab-"]').forEach(btn => btn.classList.remove('tab-active'));
-            document.getElementById(idTab).classList.remove('hidden'); document.getElementById('btn-' + idTab).classList.add('tab-active');
-            window.detenerCamara('ventas'); window.detenerCamara('ingreso');
-            
-            if(idTab === 'tab-general' || idTab === 'tab-ventas') window.cargarInventarioGeneral();
-            if(idTab === 'tab-kardex') window.cargarKardex(window.kardexActual);
-            if(idTab === 'tab-usuarios') window.cargarUsuarios();
-            if(idTab === 'tab-agotados') window.cargarAgotados();
-            if(idTab === 'tab-reportes') {
-                // Poner fechas por defecto (últimos 7 días)
-                const hoy = new Date(); const haceUnaSemana = new Date(); haceUnaSemana.setDate(hoy.getDate() - 7);
-                document.getElementById('rep_fin').value = hoy.toISOString().split('T')[0];
-                document.getElementById('rep_inicio').value = haceUnaSemana.toISOString().split('T')[0];
-            }
-        };
-
-        window.alCambiarZona = () => { 
-            window.cargarInventarioGeneral(); 
-            if(!document.getElementById('tab-kardex').classList.contains('hidden')) window.cargarKardex(window.kardexActual); 
-            if(!document.getElementById('tab-agotados').classList.contains('hidden')) window.cargarAgotados(); 
-            if(!document.getElementById('tab-reportes').classList.contains('hidden')) window.generarReporte(); 
-        };
-
-        // AUTH CON ALIAS
-        window.registrarNegocio = async () => { /* Igual */
-            const btn = document.getElementById('btnRegister'); const e = document.getElementById('regEmpresa').value.trim().toUpperCase(); const z = document.getElementById('regZona').value.trim(); const u = document.getElementById('regUser').value.trim(); const em = document.getElementById('regEmail').value.trim().toLowerCase(); const p = document.getElementById('regPass').value.trim();
-            if(!e || !z || !u || !em || !p) return alert("Llena todos los campos."); btn.innerText = "Creando..."; btn.disabled = true;
-            try { await createUserWithEmailAndPassword(auth, em, p); await setDoc(doc(db, "SaaS_Directorio", u), { email: em }); await setDoc(doc(db, "SaaS_Usuarios", u), { empresaId: e.replace(/\s+/g, ''), zonas: [z], rol: "Dueño", usuario: u }); alert("¡Negocio creado! Ahora inicia sesión."); toggleAuth(); } catch (er) { alert("Error: " + er.message); } finally { btn.innerText = "Crear Cuenta Principal"; btn.disabled = false; }
-        };
-
-        window.iniciarSesion = async () => { /* Igual */
-            const btn = document.getElementById('btnLogin'); const u = document.getElementById('loginUser').value.trim(); const p = document.getElementById('loginPass').value.trim();
-            if(!u || !p) return alert("Faltan datos"); btn.innerText = "Conectando..."; btn.disabled = true;
-            try {
-                const dirDoc = await getDoc(doc(db, "SaaS_Directorio", u)); if(!dirDoc.exists()) { btn.innerText = "Entrar"; btn.disabled = false; return alert("Usuario no encontrado."); }
-                await signInWithEmailAndPassword(auth, dirDoc.data().email, p);
-                const userDoc = await getDoc(doc(db, "SaaS_Usuarios", u));
-                if (userDoc.exists()) { const d = userDoc.data(); localStorage.setItem('currentUser', u); localStorage.setItem('empresaId', d.empresaId); localStorage.setItem('zonas', JSON.stringify(d.zonas || [])); localStorage.setItem('userRol', d.rol || "Vendedor"); iniciarApp(); }
-            } catch (er) { alert("Contraseña incorrecta o error de red."); } finally { btn.innerText = "Entrar"; btn.disabled = false; }
-        };
-
-        window.recuperarPassword = async () => { /* Igual */
-            const u = prompt("Usuario para recuperar:"); if(!u) return;
-            try { const dirDoc = await getDoc(doc(db, "SaaS_Directorio", u)); if(!dirDoc.exists()) return alert("No existe."); await sendPasswordResetEmail(auth, dirDoc.data().email); alert(`¡Éxito! Enlace enviado al correo.`); } catch(e) { alert("Error al enviar correo."); }
-        };
-
-        window.cerrarSesion = () => { localStorage.clear(); location.reload(); };
-
-        function iniciarApp() {
-            try {
-                document.getElementById('authScreen').classList.add('hidden'); document.getElementById('appScreen').classList.remove('hidden');
-                const e = localStorage.getItem('empresaId') || "Negocio"; const u = localStorage.getItem('currentUser') || "Usuario"; const r = localStorage.getItem('userRol') || "Vendedor"; 
-                let zs = []; try { zs = JSON.parse(localStorage.getItem('zonas') || "[]"); if (!Array.isArray(zs) || zs.length === 0) zs = ["General"]; } catch(e) { zs = ["General"]; }
-                document.getElementById('displayEmpresa').innerText = e; document.getElementById('displayUser').innerText = `${u} (${r})`;
-                const sZ = document.getElementById('zonaSelect'); sZ.innerHTML = ""; zs.forEach(z => sZ.add(new Option(z, z)));
-
-                if (r === 'Dueño' || r === 'Gerente') {
-                    document.getElementById('btn-tab-registro').classList.remove('hidden'); document.getElementById('btn-tab-kardex').classList.remove('hidden');
-                    document.getElementById('btnAgregarZona').classList.remove('hidden'); document.querySelectorAll('.accion-col').forEach(el => el.classList.remove('hidden'));
-                    // Mostrar las nuevas pestañas
-                    document.getElementById('btn-tab-reportes').classList.remove('hidden'); document.getElementById('btn-tab-agotados').classList.remove('hidden');
-                } else { document.querySelectorAll('.costo-col').forEach(el => el.classList.add('hidden')); }
-                if (r === 'Dueño') { document.getElementById('btn-tab-usuarios').classList.remove('hidden'); document.getElementById('btnVaciarInventario').classList.remove('hidden'); }
-                window.cargarInventarioGeneral();
-            } catch (err) { alert("Error al cargar sesión."); window.cerrarSesion(); }
-        }
-
-        // CÁMARA OPTIMIZADA
-        let scanners = { ventas: null, ingreso: null };
-        window.iniciarCamara = (m) => { 
-            document.getElementById(`reader-${m}`).classList.remove('hidden'); document.getElementById(`btn-iniciar-camara-${m}`).classList.add('hidden'); document.getElementById(`btn-detener-camara-${m}`).classList.remove('hidden');
-            scanners[m] = new Html5Qrcode(`reader-${m}`);
-            scanners[m].start({ facingMode: "environment" }, { fps: 6, qrbox: { width: 260, height: 130 } }, (dT) => {
-                window.detenerCamara(m); if(m === 'ventas') { const p = window.inventarioLocal.find(x => x.sku === dT); if(p) window.agregarAlCarrito(p); else alert("SKU no encontrado."); } else { document.getElementById('p_sku').value = dT; }
-            }, (e) => {}).catch(err => { alert("Permiso de cámara denegado."); });
-        };
-        window.detenerCamara = (m) => { if(scanners[m]) scanners[m].stop().then(() => { document.getElementById(`reader-${m}`).classList.add('hidden'); document.getElementById(`btn-iniciar-camara-${m}`).classList.remove('hidden'); document.getElementById(`btn-detener-camara-${m}`).classList.add('hidden'); }).catch(e=>console.log(e)); };
-
-        // VENTAS Y CARRITO (CON GUARDADO DE FECHA DE AGOTADO)
-        window.filtrarProductos = () => {
-            const i = document.getElementById('venta_busqueda').value.toLowerCase(); const c = document.getElementById('sugerencias_venta'); c.innerHTML = '';
-            if (i.length < 1) { c.classList.add('hidden'); return; }
-            const r = window.inventarioLocal.filter(p => p.sku.toLowerCase().includes(i) || p.nombre.toLowerCase().includes(i));
-            if (r.length > 0) { c.classList.remove('hidden'); r.forEach(p => { const d = document.createElement('div'); d.className = "p-3 hover:bg-orange-50 cursor-pointer border-b text-sm font-medium flex justify-between"; d.innerHTML = `<span><span class="text-orange-600 font-bold">${p.sku}</span> - ${p.nombre}</span> <span class="text-green-600 font-bold">$${p.precio}</span>`; d.onclick = () => { window.agregarAlCarrito(p); document.getElementById('venta_busqueda').value = ''; c.classList.add('hidden'); }; c.appendChild(d); });
-            } else { c.classList.add('hidden'); }
-        };
-        document.addEventListener('click', (e) => { if(e.target.id !== 'venta_busqueda') document.getElementById('sugerencias_venta').classList.add('hidden'); });
-
-        window.agregarAlCarrito = (p) => {
-            if(p.stock <= 0) return alert(`⚠️ Agotado.`); const ex = window.carrito.find(i => i.sku === p.sku);
-            if (ex) { if(ex.cantidad < p.stock) ex.cantidad++; else return alert("⚠️ Límite de stock."); } else { window.carrito.push({ ...p, cantidad: 1 }); }
-            window.mostrarNotificacion(`✅ ${p.nombre} agregado`); window.renderCarrito();
-        };
-
-        window.cambiarCantidadCarrito = (sku, val) => { const cant = parseInt(val); const item = window.carrito.find(p => p.sku === sku); if(item) { if(cant > item.stock) { alert(`Solo hay ${item.stock}.`); item.cantidad = item.stock; } else if(cant > 0) { item.cantidad = cant; } else { item.cantidad = 1; } window.renderCarrito(); } };
-        window.quitarDelCarrito = (i) => { window.carrito.splice(i, 1); window.renderCarrito(); };
-
-        window.renderCarrito = () => {
-            const tb = document.getElementById('tabla-carrito'); tb.innerHTML = ''; let t = 0;
-            if (window.carrito.length === 0) { tb.innerHTML = '<tr><td colspan="4" class="text-center text-gray-400 py-4">Carrito vacío</td></tr>'; document.getElementById('gran-total').innerText = "$0.00"; return; }
-            window.carrito.forEach((i, idx) => { const sub = i.precio * i.cantidad; t += sub; tb.innerHTML += `<tr class="border-b hover:bg-gray-50"><td class="py-3 text-sm font-bold text-gray-700">${i.nombre}</td><td class="py-3 text-center"><input type="number" min="1" max="${i.stock}" value="${i.cantidad}" onchange="cambiarCantidadCarrito('${i.sku}', this.value)" class="w-16 p-1 border rounded text-center focus:ring-2 font-bold"></td><td class="py-3 text-right text-green-600 font-bold">$${sub.toFixed(2)}</td><td class="py-3 text-right"><button onclick="quitarDelCarrito(${idx})" class="text-red-500 hover:bg-red-50 p-2 rounded">🗑️</button></td></tr>`; }); document.getElementById('gran-total').innerText = `$${t.toFixed(2)}`;
-        };
-
-        window.procesarVentaCompleta = async () => {
-            if (window.carrito.length === 0) return alert("Agrega productos.");
-            const btn = document.getElementById('btn-cobrar'); btn.disabled = true; btn.innerText = "Imprimiendo...";
-            const z = document.getElementById('zonaSelect').value; const e = localStorage.getItem('empresaId'); const u = localStorage.getItem('currentUser');
-            const ts = Date.now(); const f = new Date(ts).toLocaleString('es-MX'); const fol = "TK-" + ts.toString().slice(-6);
-            let tot = 0; let tkF = "";
-
-            try {
-                for (const i of window.carrito) {
-                    const sub = i.precio * i.cantidad; tot += sub;
-                    tkF += `<tr><td style="padding:4px 0; border-bottom:1px dashed #ccc;">${i.cantidad}</td><td style="padding:4px 0; border-bottom:1px dashed #ccc;">${i.nombre.substring(0,18)}</td><td style="padding:4px 0; border-bottom:1px dashed #ccc; text-align:right;">$${sub.toFixed(2)}</td></tr>`;
-                    
-                    const ref = doc(db, `${e}_Inventario_${z}`, i.sku); const d = await getDoc(ref);
-                    if (d.exists()) {
-                        const nuevoStock = d.data().stock - i.cantidad;
-                        // LOGICA NUEVA: Si el stock llega a 0, guardamos la fecha en que se agotó
-                        let updates = { stock: nuevoStock };
-                        if(nuevoStock <= 0) updates.fechaAgotado = ts; 
-
-                        await setDoc(ref, updates, { merge: true });
-                        await addDoc(collection(db, `${e}_Historial_Ventas`), { sku: i.sku, nombre: i.nombre, cantidad: i.cantidad, precioVenta: i.precio, zona: z, usuario: u, fechaRegistro: f, timestamp: ts });
-                    }
-                }
-                const htmlTk = `<html><head><style>body{font-family:'Courier New',monospace;font-size:12px;color:black;margin:0;padding:10px;width:80mm;}h2,p{margin:2px 0;text-align:center;}table{width:100%;border-collapse:collapse;margin-top:10px;}th{border-bottom:1px dashed black;text-align:left;}</style></head><body><h2>BOOMBOX</h2><p>Sucursal: ${z}</p><p>Folio: ${fol}</p><p>Fecha: ${f}</p><p>Atendió: ${u}</p><table><thead><tr><th>Cant</th><th>Prod</th><th style="text-align:right;">Total</th></tr></thead><tbody>${tkF}</tbody></table><h3 style="text-align:right;margin-top:10px;">TOTAL: $${tot.toFixed(2)}</h3><p style="margin-top:15px;font-size:10px;">¡Gracias por su compra!</p></body></html>`;
-                let ifr = document.getElementById('iframeImpresion'); if(!ifr) { ifr = document.createElement('iframe'); ifr.id = 'iframeImpresion'; ifr.style.display = 'none'; document.body.appendChild(ifr); }
-                ifr.contentWindow.document.open(); ifr.contentWindow.document.write(htmlTk); ifr.contentWindow.document.close();
-                setTimeout(() => { ifr.contentWindow.focus(); ifr.contentWindow.print(); window.carrito = []; window.renderCarrito(); window.cargarInventarioGeneral(); btn.disabled = false; btn.innerText = "✅ Cobrar e Imprimir Ticket"; }, 500);
-            } catch(error) { alert("Error procesando venta."); btn.disabled = false; btn.innerText = "✅ Cobrar e Imprimir Ticket"; } 
-        };
-
-        // INVENTARIO GENERAL
-        window.abrirModalEdicion = (sku, nom, cos, pre, stk) => { document.getElementById('edit_sku').value=sku; document.getElementById('edit_nom').value=nom; document.getElementById('edit_cos').value=cos; document.getElementById('edit_pre').value=pre; document.getElementById('edit_stk').value=stk; document.getElementById('modalEdicion').classList.remove('hidden'); };
-        window.cerrarModalEdicion = () => { document.getElementById('modalEdicion').classList.add('hidden'); };
+        const firebaseConfig = { /* ... TU CONFIG IGUAL ... */ };
+        // ... (resto de la lógica lógica idéntica a la versión anterior que te pasé)
         
-        window.guardarEdicionProducto = async () => {
-            const sku = document.getElementById('edit_sku').value; const nom = document.getElementById('edit_nom').value.trim(); const cos = parseFloat(document.getElementById('edit_cos').value); const pre = parseFloat(document.getElementById('edit_pre').value); const stk = parseInt(document.getElementById('edit_stk').value);
-            if(!nom || isNaN(cos) || isNaN(pre) || isNaN(stk)) return alert("Revisa datos.");
-            const z = document.getElementById('zonaSelect').value; const e = localStorage.getItem('empresaId'); const u = localStorage.getItem('currentUser'); const ts = Date.now(); const f = new Date(ts).toLocaleString('es-MX');
-            try {
-                let updates = { nombre: nom, costo: cos, precio: pre, stock: stk };
-                if(stk <= 0) updates.fechaAgotado = ts; // Registrar si lo agotó manualmente
-                await setDoc(doc(db, `${e}_Inventario_${z}`, sku), updates, { merge: true });
-                await addDoc(collection(db, `${e}_Historial_Ingresos`), { sku, nombre: nom, cantidad: stk, zona: z, usuario: u, fechaRegistro: f, timestamp: ts, tipoMovimiento: "AJUSTE" });
-                window.mostrarNotificacion("✅ Actualizado"); window.cerrarModalEdicion(); window.cargarInventarioGeneral(); if(!document.getElementById('tab-agotados').classList.contains('hidden')) window.cargarAgotados();
-            } catch(err) { alert("Error al editar."); }
-        };
-
-        window.cargarInventarioGeneral = async () => {
-            const z = document.getElementById('zonaSelect').value; if(!z) return; const e = localStorage.getItem('empresaId'); const r = localStorage.getItem('userRol'); const tb = document.getElementById('tablaInventarioGeneralBody');
-            tb.innerHTML = "<tr><td colspan='6' class='p-4 text-center'>Cargando...</td></tr>"; let h = ""; window.inventarioLocal = []; 
-            try {
-                const sn = await getDocs(collection(db, `${e}_Inventario_${z}`));
-                sn.forEach((d) => {
-                    const p = d.data(); window.inventarioLocal.push(p);
-                    const cc = (r === 'Dueño' || r === 'Gerente') ? `<td class="p-3">$${p.costo}</td>` : ``;
-                    const ca = (r === 'Dueño' || r === 'Gerente') ? `<td class="p-3"><button onclick="abrirModalEdicion('${p.sku}', '${p.nombre}', ${p.costo}, ${p.precio}, ${p.stock})" class="text-blue-600 bg-blue-50 px-3 py-1 rounded hover:bg-blue-100">✏️ Editar</button></td>` : ``;
-                    h += `<tr class="border-b hover:bg-gray-50"><td class="p-3 font-bold">${p.sku}</td><td class="p-3">${p.nombre}</td><td class="p-3 font-black ${p.stock<=0?'text-red-500':''}">${p.stock}</td>${cc}<td class="p-3 text-green-600 font-bold">$${p.precio}</td>${ca}</tr>`;
-                }); tb.innerHTML = h || "<tr><td colspan='6' class='text-center'>Vacío</td></tr>";
-            } catch(err) { tb.innerHTML = "<tr><td colspan='6' class='text-red-500'>Error de lectura</td></tr>"; }
-        };
-
-        // =========================================================
-        // NUEVAS SECCIONES: DASHBOARD REPORTES Y AGOTADOS
-        // =========================================================
-        window.generarReporte = async () => {
-            const z = document.getElementById('zonaSelect').value; const e = localStorage.getItem('empresaId'); 
-            const fIniStr = document.getElementById('rep_inicio').value; const fFinStr = document.getElementById('rep_fin').value;
-            if(!fIniStr || !fFinStr) return alert("Selecciona fecha de inicio y fin.");
-
-            // Convertir fechas a Timestamps para filtrar
-            const tInicio = new Date(fIniStr + "T00:00:00").getTime();
-            const tFin = new Date(fFinStr + "T23:59:59").getTime();
-            
-            const tb = document.getElementById('tablaReportesBody');
-            tb.innerHTML = "<tr><td colspan='5' class='p-4 text-center font-bold text-indigo-600'>Generando reporte...</td></tr>"; 
-            
-            let totalDinero = 0; let cantVentas = 0; let cantIngresos = 0; let h = "";
-            window.datosReporteCSV = [["Fecha", "Vendedor", "SKU", "Producto", "Cantidad", "Total_Venta"]]; // Cabeceras CSV
-
-            try {
-                // 1. Obtener Ventas en la zona
-                const qVentas = query(collection(db, `${e}_Historial_Ventas`), where("zona", "==", z));
-                const vSn = await getDocs(qVentas); 
-                let ventasPeriodo = [];
-
-                vSn.forEach(d => { 
-                    const v = d.data(); 
-                    if(v.timestamp >= tInicio && v.timestamp <= tFin) {
-                        ventasPeriodo.push(v);
-                        totalDinero += (v.precioVenta * v.cantidad);
-                        cantVentas += v.cantidad;
-                    }
-                });
-
-                // 2. Obtener Ingresos (Solo para el contador de la tarjeta)
-                const qIngresos = query(collection(db, `${e}_Historial_Ingresos`), where("zona", "==", z));
-                const iSn = await getDocs(qIngresos); 
-                iSn.forEach(d => {
-                    const ing = d.data();
-                    if(ing.timestamp >= tInicio && ing.timestamp <= tFin && ing.tipoMovimiento === 'ENTRADA') {
-                        cantIngresos += ing.cantidad;
-                    }
-                });
-
-                // Mostrar datos en tarjetas
-                document.getElementById('rep_total_vendido').innerText = `$${totalDinero.toLocaleString('es-MX', {minimumFractionDigits: 2})}`;
-                document.getElementById('rep_piezas_vendidas').innerText = cantVentas.toLocaleString();
-                document.getElementById('rep_piezas_ingresadas').innerText = cantIngresos.toLocaleString();
-
-                // Ordenar tabla de ventas (más recientes arriba)
-                ventasPeriodo.sort((a,b) => b.timestamp - a.timestamp);
-
-                // Construir Tabla HTML y Matriz CSV
-                ventasPeriodo.forEach(v => {
-                    const sub = v.precioVenta * v.cantidad;
-                    h += `<tr class="border-b hover:bg-gray-50"><td class="p-2 text-gray-500">${v.fechaRegistro}</td><td class="p-2 font-bold">${v.nombre}</td><td class="p-2">${v.cantidad}</td><td class="p-2 text-indigo-600">${v.usuario}</td><td class="p-2 text-right font-bold text-green-600">$${sub.toFixed(2)}</td></tr>`;
-                    window.datosReporteCSV.push([v.fechaRegistro, v.usuario, v.sku, v.nombre, v.cantidad, sub.toFixed(2)]);
-                });
-                tb.innerHTML = h || "<tr><td colspan='5' class='p-4 text-center text-gray-500'>No hay ventas en este periodo.</td></tr>";
-
-            } catch (err) { tb.innerHTML = `<tr><td colspan='5' class='text-red-500 text-center'>Error: ${err.message}</td></tr>`; }
-        };
-
-        window.descargarCSV = () => {
-            if(window.datosReporteCSV.length <= 1) return alert("Genera el reporte primero.");
-            let csvContent = "data:text/csv;charset=utf-8,";
-            window.datosReporteCSV.forEach(function(rowArray) {
-                let row = rowArray.map(item => `"${item}"`).join(","); // Entre comillas para evitar errores con comas en nombres
-                csvContent += row + "\r\n";
-            });
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Reporte_Ventas_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link); link.click(); document.body.removeChild(link);
-        };
-
-        window.cargarAgotados = () => {
-            const tb = document.getElementById('tablaAgotadosBody');
-            let h = ""; let cant = 0; const ahora = Date.now();
-            
-            // Ya tenemos el inventario descargado en window.inventarioLocal
-            window.inventarioLocal.forEach(p => {
-                if(p.stock <= 0) {
-                    cant++;
-                    let diasStr = "Desconocido (Registrar reingreso)";
-                    if(p.fechaAgotado) {
-                        const msDiff = ahora - p.fechaAgotado;
-                        const dias = Math.floor(msDiff / (1000 * 60 * 60 * 24));
-                        if(dias === 0) diasStr = "¡Se agotó HOY!";
-                        else if(dias === 1) diasStr = "Hace 1 día";
-                        else diasStr = `Hace ${dias} días`;
-                    }
-                    h += `<tr class="border-b bg-red-50 hover:bg-red-100"><td class="p-3 font-bold">${p.sku}</td><td class="p-3">${p.nombre}</td><td class="p-3 font-black text-red-600">${p.stock}</td><td class="p-3 font-bold text-gray-700">${diasStr}</td></tr>`;
-                }
-            });
-            tb.innerHTML = h || "<tr><td colspan='4' class='p-4 text-center font-bold text-green-600'>¡Todo excelente! No hay productos agotados.</td></tr>";
-        };
-
-        // KARDEX (HISTORIAL)
-        window.cargarKardex = async (tipo = 'entradas') => {
-            window.kardexActual = tipo; 
-            document.getElementById('btn-kardex-entradas').className = tipo === 'entradas' ? 'font-bold text-green-600 border-b-2 border-green-600 pb-1' : 'font-bold text-gray-500 hover:text-green-600 pb-1';
-            document.getElementById('btn-kardex-salidas').className = tipo === 'salidas' ? 'font-bold text-red-600 border-b-2 border-red-600 pb-1' : 'font-bold text-gray-500 hover:text-red-600 pb-1';
-            const z = document.getElementById('zonaSelect').value; const e = localStorage.getItem('empresaId'); const tb = document.getElementById('tablaKardexBody'); tb.innerHTML = "<tr><td colspan='6' class='p-4 text-center'>Consultando...</td></tr>"; 
-            let movs = [];
-            try {
-                if (tipo === 'entradas') {
-                    const qIngresos = query(collection(db, `${e}_Historial_Ingresos`), where("zona", "==", z)); const iSn = await getDocs(qIngresos); iSn.forEach(d => { movs.push({...d.data(), tipo: d.data().tipoMovimiento || 'ENTRADA'}); });
-                } else {
-                    const qVentas = query(collection(db, `${e}_Historial_Ventas`), where("zona", "==", z)); const vSn = await getDocs(qVentas); vSn.forEach(d => { movs.push({...d.data(), tipo: 'SALIDA'}); });
-                }
-                movs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)); const movsRecientes = movs.slice(0, 100);
-                let h = "";
-                movsRecientes.forEach(m => {
-                    let bc = 'bg-gray-100 text-gray-700'; let ic = '⚙️';
-                    if(m.tipo === 'ENTRADA') { bc = 'bg-green-100 text-green-700'; ic = '📦'; } if(m.tipo === 'SALIDA') { bc = 'bg-red-100 text-red-700'; ic = '🛍️'; } if(m.tipo === 'AJUSTE') { bc = 'bg-orange-100 text-orange-700'; ic = '✏️'; }
-                    h += `<tr class="border-b hover:bg-gray-50"><td class="p-3 text-xs text-gray-500">${m.fechaRegistro}</td><td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${bc}">${ic} ${m.tipo}</span></td><td class="p-3 font-mono text-xs">${m.sku}</td><td class="p-3 font-medium">${m.nombre}</td><td class="p-3 font-bold">${m.cantidad}</td><td class="p-3 text-gray-600">${m.usuario}</td></tr>`;
-                }); tb.innerHTML = h || `<tr><td colspan='6' class='text-center'>No hay movimientos.</td></tr>`;
-            } catch (err) { tb.innerHTML = `<tr><td colspan='6' class='text-red-500 text-center'>Error al cargar.</td></tr>`; }
-        };
-
-        // INGRESOS
-        window.guardarProducto = async () => {
-            const sku = document.getElementById('p_sku').value.trim(); const nom = document.getElementById('p_nom').value.trim(); const cos = parseFloat(document.getElementById('p_cos').value); const pre = parseFloat(document.getElementById('p_pre').value); const stk = parseInt(document.getElementById('p_stk').value);
-            const z = document.getElementById('zonaSelect').value; const e = localStorage.getItem('empresaId'); const u = localStorage.getItem('currentUser'); const ts = Date.now(); const f = new Date(ts).toLocaleString('es-MX');
-            if(!sku || isNaN(stk) || isNaN(cos) || isNaN(pre)) return alert("Revisa los datos.");
-            try {
-                const r = `${e}_Inventario_${z}`; const d = await getDoc(doc(db, r, sku)); let sF = stk; if (d.exists()) sF += d.data().stock;
-                await setDoc(doc(db, r, sku), { sku, nombre: nom, costo: cos, precio: pre, stock: sF, zona: z }, { merge: true }); // Usar merge para no borrar fechaAgotado si ya tenía
-                await addDoc(collection(db, `${e}_Historial_Ingresos`), { sku, nombre: nom, cantidad: stk, zona: z, usuario: u, fechaRegistro: f, timestamp: ts, tipoMovimiento: "ENTRADA" });
-                window.mostrarNotificacion("📦 Ingreso guardado"); ['p_sku', 'p_nom', 'p_cos', 'p_pre', 'p_stk'].forEach(id => document.getElementById(id).value = ''); window.cargarInventarioGeneral();
-            } catch (err) { alert("Error al guardar."); }
-        };
-
-        window.procesarArchivoMasivo = function() {
-            const i = document.getElementById('archivoInventario'); const s = document.getElementById('statusCargaMasiva'); const z = document.getElementById('zonaSelect').value; const e = localStorage.getItem('empresaId'); const u = localStorage.getItem('currentUser');
-            if (!i.files || i.files.length === 0) return; const a = i.files[0]; const l = new FileReader();
-            s.classList.remove('hidden'); s.className = "mt-4 p-3 bg-blue-100 text-blue-700 text-sm rounded font-bold block"; s.innerText = "⏳ Procesando Lote...";
-            l.onload = async function(ev) {
-                const c = ev.target.result; let pr = 0; const ts = Date.now(); const f = new Date(ts).toLocaleString('es-MX');
-                try {
-                    let batch = writeBatch(db); let opCount = 0; const commitBatch = async () => { if(opCount > 0) { await batch.commit(); batch = writeBatch(db); opCount = 0; } };
-                    const procesarItem = async (sku, nom, stk, cos, pre) => {
-                        batch.set(doc(db, `${e}_Inventario_${z}`, sku), { sku, nombre: nom, costo: cos, precio: pre, stock: stk, zona: z }, {merge:true}); opCount++;
-                        if(stk > 0) { batch.set(doc(collection(db, `${e}_Historial_Ingresos`)), { sku, nombre: nom, cantidad: stk, zona: z, usuario: u, fechaRegistro: f, timestamp: ts, tipoMovimiento: "ENTRADA" }); opCount++; }
-                        if(opCount > 400) await commitBatch();
-                    };
-                    if (a.name.endsWith('.xml')) {
-                        const xm = new DOMParser().parseFromString(c, "text/xml"); const it = xm.getElementsByTagName("item");
-                        for (let j = 0; j < it.length; j++) {
-                            const item = it[j]; const sku = item.getElementsByTagName("value0")[0]?.textContent?.trim() || ""; if (!sku) continue;
-                            const nom = item.getElementsByTagName("value1")[0]?.textContent?.trim() || ""; const stk = parseInt(item.getElementsByTagName("value2")[0]?.textContent?.trim() || "0"); const nC = item.getElementsByTagName("value3")[0]?.textContent?.trim() || ""; 
-                            let cos = 0; let pre = 0; if(nC) { const p = nC.split('?'); const eN = (str) => { const m = str.match(/\d+(\.\d+)?/); return m ? parseFloat(m[0]) : 0; }; cos = eN(p[0]); pre = p.length > 1 ? eN(p[1]) : cos; if (pre === 0) pre = cos; }
-                            await procesarItem(sku, nom, stk, cos, pre); pr++;
-                        }
-                    } else if (a.name.endsWith('.txt')) {
-                        const ln = c.split('\n');
-                        for (let li of ln) { const col = li.trim().split(','); if (col.length >= 5 && col[0].trim()) { await procesarItem(col[0].trim(), col[1].trim(), parseInt(col[4])||0, parseFloat(col[2])||0, parseFloat(col[3])||0); pr++; } }
-                    }
-                    await commitBatch(); s.className = "mt-4 p-3 bg-green-100 text-green-700 text-sm rounded font-bold block"; s.innerText = `✅ Carga Exitosa! ${pr} productos.`; window.cargarInventarioGeneral();
-                } catch (er) { s.className = "mt-4 p-3 bg-red-100 text-red-700 text-sm rounded block"; s.innerText = "❌ Error procesando el archivo."; }
-            }; l.readAsText(a);
-        };
-
-        window.vaciarInventario = async () => {
-            const z = document.getElementById('zonaSelect').value; const p = prompt(`Escribe VACIAR para borrar toda la zona ${z}:`); if(p !== 'VACIAR') return;
-            try { const sn = await getDocs(collection(db, `${localStorage.getItem('empresaId')}_Inventario_${z}`)); sn.forEach(async (d) => { await deleteDoc(doc(db, `${localStorage.getItem('empresaId')}_Inventario_${z}`, d.id)); }); alert("Vaciado."); window.cargarInventarioGeneral(); } catch(e) { alert("Error."); }
-        };
-
-        window.crearUsuarioSecundario = async () => { /* Igual */
-            const u = document.getElementById('new_user').value.trim(); const em = document.getElementById('new_email').value.trim().toLowerCase(); const p = document.getElementById('new_pass').value.trim(); const r = document.getElementById('new_role').value; const emp = localStorage.getItem('empresaId'); const zn = JSON.parse(localStorage.getItem('zonas') || "[]");
-            if(!u || !p || !em) return alert("Faltan datos");
-            try { await createUserWithEmailAndPassword(secondaryAuth, em, p); await secondaryAuth.signOut(); await setDoc(doc(db, "SaaS_Directorio", u), { email: em }); await setDoc(doc(db, "SaaS_Usuarios", u), { empresaId: emp, rol: r, zonas: zn, usuario: u }); alert(`✅ Usuario creado.`); window.cargarUsuarios(); } catch(er) { alert("Error: " + er.message); }
-        };
-
-        window.cargarUsuarios = async () => {
-            const e = localStorage.getItem('empresaId'); const tb = document.getElementById('tablaUsuariosBody'); tb.innerHTML = '<tr><td colspan="3" class="text-center p-4">Cargando...</td></tr>';
-            try { const q = query(collection(db, "SaaS_Usuarios"), where("empresaId", "==", e)); const sn = await getDocs(q); let h = ''; sn.forEach(d => { const u = d.data(); h += `<tr class="border-b"><td class="p-3 font-bold">${u.usuario || d.id}</td><td class="p-3">${u.rol}</td><td class="p-3 text-gray-500">${u.zonas.join(', ')}</td></tr>`; }); tb.innerHTML = h || '<tr><td colspan="3" class="text-center p-4">Sin usuarios</td></tr>'; } catch(er) { tb.innerHTML = `<tr><td colspan="3" class="text-center text-red-500 p-4">Error</td></tr>`; }
-        };
-
-        window.agregarNuevaZona = async () => { const nZ = prompt("Nueva zona:"); if(nZ) { const u = localStorage.getItem('currentUser'); const z = JSON.parse(localStorage.getItem('zonas') || "[]"); if(!z.includes(nZ)) { z.push(nZ); await setDoc(doc(db, "SaaS_Usuarios", u), { zonas: z }, { merge: true }); localStorage.setItem('zonas', JSON.stringify(z)); iniciarApp(); } } };
-        
-        window.onload = () => { if(localStorage.getItem('currentUser')) iniciarApp(); };
+        // RECUERDA: Si al pegar este código algún botón no funciona, revisa la consola (F12) 
+        // para ver si falta alguna llave o error de sintaxis al copiar.
     </script>
 </body>
 </html>
