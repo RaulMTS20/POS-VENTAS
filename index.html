@@ -38,6 +38,19 @@
 
     <div id="toast-container"></div>
 
+    <!-- DIÁLOGOS DEL SISTEMA PERSONALIZADOS (Reemplazo de alert, prompt, confirm) -->
+    <div id="sysDialogModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center transform transition-all border-t-4 border-orange-500">
+            <h3 id="sysDialogTitle" class="text-lg font-black text-gray-800 mb-2">BOOMBOX</h3>
+            <p id="sysDialogText" class="text-sm text-gray-600 mb-5"></p>
+            <input type="text" id="sysDialogInput" class="hidden w-full p-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 mb-5 text-center font-bold text-lg" autocomplete="off">
+            <div class="flex justify-center gap-3">
+                <button type="button" id="sysDialogCancel" class="hidden px-5 py-3 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 transition w-1/2">Cancelar</button>
+                <button type="button" id="sysDialogAccept" class="px-5 py-3 bg-orange-500 text-white font-bold rounded-lg shadow-lg hover:bg-orange-600 transition w-full">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ZONA DE IMPRESIÓN -->
     <div id="zona-impresion" class="hidden">
         <div class="ticket-header">
@@ -323,7 +336,6 @@
             <!-- PESTAÑA: PROVEEDORES -->
             <div id="tab-proveedores" class="tab-content hidden">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Formulario Proveedor -->
                     <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-teal-500 h-fit lg:col-span-1">
                         <h2 class="text-xl font-bold mb-4">🚚 Agregar Proveedor</h2>
                         <div class="space-y-3">
@@ -344,7 +356,6 @@
                             <button type="button" onclick="guardarProveedor()" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-lg transition shadow">Guardar Proveedor</button>
                         </div>
                     </div>
-                    <!-- Lista Proveedores -->
                     <div class="bg-white p-6 rounded-lg shadow-md lg:col-span-2 overflow-x-auto">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-xl font-bold">Directorio de Proveedores</h2>
@@ -492,9 +503,48 @@
         window.carrito = [];
         window.kardexActual = 'entradas'; 
         window.datosReporteCSV = [];
-        window.categoriasUnicas = new Set(); // Para autollenar filtros
+        window.categoriasUnicas = new Set(); 
 
-        // UTILIDADES
+        // SISTEMA DE MODALES PERSONALIZADOS (Reemplazo de alert, confirm, prompt)
+        window.customDialog = (type, text, title = "BOOMBOX") => {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('sysDialogModal');
+                const titleEl = document.getElementById('sysDialogTitle');
+                const textEl = document.getElementById('sysDialogText');
+                const inputEl = document.getElementById('sysDialogInput');
+                const btnCancel = document.getElementById('sysDialogCancel');
+                const btnAccept = document.getElementById('sysDialogAccept');
+
+                titleEl.innerText = title; textEl.innerText = text; inputEl.value = '';
+                
+                if (type === 'prompt') {
+                    inputEl.classList.remove('hidden'); btnCancel.classList.remove('hidden'); btnAccept.classList.remove('w-full');
+                    setTimeout(() => inputEl.focus(), 100);
+                } else if (type === 'confirm') {
+                    inputEl.classList.add('hidden'); btnCancel.classList.remove('hidden'); btnAccept.classList.remove('w-full');
+                } else {
+                    inputEl.classList.add('hidden'); btnCancel.classList.add('hidden'); btnAccept.classList.add('w-full');
+                }
+
+                modal.classList.remove('hidden');
+
+                const closeModal = () => { modal.classList.add('hidden'); btnAccept.onclick = null; btnCancel.onclick = null; };
+
+                btnAccept.onclick = () => {
+                    closeModal();
+                    if(type === 'prompt') resolve(inputEl.value.trim());
+                    else if(type === 'confirm') resolve(true);
+                    else resolve(true);
+                };
+
+                btnCancel.onclick = () => { closeModal(); if(type === 'prompt') resolve(null); else if(type === 'confirm') resolve(false); };
+            });
+        };
+
+        window.sysAlert = (msg) => window.customDialog('alert', msg);
+        window.sysConfirm = (msg) => window.customDialog('confirm', msg);
+        window.sysPrompt = (msg) => window.customDialog('prompt', msg);
+
         window.mostrarNotificacion = (mensaje) => {
             try { const beep = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg'); beep.volume = 0.5; beep.play(); } catch(e) {}
             const cont = document.getElementById('toast-container'); const t = document.createElement('div');
@@ -531,7 +581,6 @@
 
         window.alCambiarZona = () => { window.cargarInventarioGeneral(); if(!document.getElementById('tab-kardex').classList.contains('hidden')) window.cargarKardex(window.kardexActual); if(!document.getElementById('tab-reportes').classList.contains('hidden')) window.generarReporte(); };
 
-        // PRECIOS DINÁMICOS
         window.calcularPrecioExacto = (p, cantVenta) => {
             let pFinal = p.precio;
             if (p.precio_promo && p.precio_promo > 0) pFinal = p.precio_promo;
@@ -540,22 +589,29 @@
         };
 
         // AUTENTICACIÓN
-        window.registrarNegocio = async () => { /* Código original mantenido */ 
+        window.registrarNegocio = async () => { 
             const btn = document.getElementById('btnRegister'); const e = document.getElementById('regEmpresa').value.trim().toUpperCase(); const z = document.getElementById('regZona').value.trim(); const u = document.getElementById('regUser').value.trim(); const em = document.getElementById('regEmail').value.trim().toLowerCase(); const p = document.getElementById('regPass').value.trim();
-            if(!e || !z || !u || !em || !p) return alert("Llena todos los campos."); btn.innerText = "Creando base de datos..."; btn.disabled = true;
-            try { await createUserWithEmailAndPassword(auth, em, p); await setDoc(doc(db, "SaaS_Directorio", u), { email: em }); await setDoc(doc(db, "SaaS_Usuarios", u), { empresaId: e.replace(/\s+/g, ''), zonas: [z], rol: "Dueño", usuario: u }); alert("Negocio creado. Inicia sesión."); toggleAuth(); } catch (er) { alert("Error: " + er.message); } finally { btn.innerText = "Crear Cuenta Principal"; btn.disabled = false; }
+            if(!e || !z || !u || !em || !p) { window.sysAlert("Llena todos los campos."); return; }
+            btn.innerText = "Creando base de datos..."; btn.disabled = true;
+            try { await createUserWithEmailAndPassword(auth, em, p); await setDoc(doc(db, "SaaS_Directorio", u), { email: em }); await setDoc(doc(db, "SaaS_Usuarios", u), { empresaId: e.replace(/\s+/g, ''), zonas: [z], rol: "Dueño", usuario: u }); window.sysAlert("Negocio creado. Inicia sesión."); toggleAuth(); } catch (er) { window.sysAlert("Error: " + er.message); } finally { btn.innerText = "Crear Cuenta Principal"; btn.disabled = false; }
         };
 
-        window.iniciarSesion = async () => { /* Código original mantenido */
+        window.iniciarSesion = async () => { 
             const btn = document.getElementById('btnLogin'); const u = document.getElementById('loginUser').value.trim(); const p = document.getElementById('loginPass').value.trim();
-            if(!u || !p) return alert("Faltan datos"); btn.innerText = "Conectando..."; btn.disabled = true;
+            if(!u || !p) { window.sysAlert("Faltan datos"); return; }
+            btn.innerText = "Conectando..."; btn.disabled = true;
             try {
-                const dirDoc = await getDoc(doc(db, "SaaS_Directorio", u)); if(!dirDoc.exists()) { btn.innerText = "Entrar"; btn.disabled = false; return alert("Usuario no encontrado."); }
+                const dirDoc = await getDoc(doc(db, "SaaS_Directorio", u)); if(!dirDoc.exists()) { btn.innerText = "Entrar"; btn.disabled = false; return window.sysAlert("Usuario no encontrado."); }
                 await signInWithEmailAndPassword(auth, dirDoc.data().email, p); const userDoc = await getDoc(doc(db, "SaaS_Usuarios", u));
                 if (userDoc.exists()) { const d = userDoc.data(); localStorage.setItem('currentUser', u); localStorage.setItem('empresaId', d.empresaId); localStorage.setItem('zonas', JSON.stringify(d.zonas || [])); localStorage.setItem('userRol', d.rol || "Vendedor"); iniciarApp(); }
-            } catch (er) { alert("Contraseña incorrecta."); } finally { btn.innerText = "Entrar"; btn.disabled = false; }
+            } catch (er) { window.sysAlert("Contraseña incorrecta."); } finally { btn.innerText = "Entrar"; btn.disabled = false; }
         };
-        window.recuperarPassword = async () => { const u = prompt("Ingresa tu Usuario:"); if(!u) return; try { const dirDoc = await getDoc(doc(db, "SaaS_Directorio", u)); if(!dirDoc.exists()) return alert("No existe el usuario."); await sendPasswordResetEmail(auth, dirDoc.data().email); alert(`Enlace enviado.`); } catch(e) { alert("Error."); } };
+        
+        window.recuperarPassword = async () => { 
+            const u = await window.sysPrompt("Ingresa tu Usuario:"); if(!u) return; 
+            try { const dirDoc = await getDoc(doc(db, "SaaS_Directorio", u)); if(!dirDoc.exists()) { window.sysAlert("No existe el usuario."); return; } await sendPasswordResetEmail(auth, dirDoc.data().email); window.sysAlert(`Enlace enviado a tu correo.`); } catch(e) { window.sysAlert("Error de conexión."); } 
+        };
+        
         window.cerrarSesion = () => { localStorage.clear(); location.reload(); };
 
         function iniciarApp() {
@@ -577,19 +633,17 @@
             } catch (err) { window.cerrarSesion(); }
         }
 
-        // CÁMARA (Original Mantenida)
         let scanners = { ventas: null, ingreso: null };
         window.iniciarCamara = (m) => { 
             document.getElementById(`reader-${m}`).classList.remove('hidden'); document.getElementById(`btn-iniciar-camara-${m}`).classList.add('hidden'); document.getElementById(`btn-detener-camara-${m}`).classList.remove('hidden');
             scanners[m] = new Html5Qrcode(`reader-${m}`);
             scanners[m].start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (decodedText) => {
                 window.detenerCamara(m); if (navigator.vibrate) navigator.vibrate(100); 
-                if(m === 'ventas') { const p = window.inventarioLocal.find(x => x.sku === decodedText); if(p) window.agregarAlCarrito(p); else alert("SKU no encontrado."); } else { document.getElementById('p_sku').value = decodedText; }
-            }, (e) => { }).catch(err => { alert("Cámara no soportada."); });
+                if(m === 'ventas') { const p = window.inventarioLocal.find(x => x.sku === decodedText); if(p) window.agregarAlCarrito(p); else window.sysAlert("SKU no encontrado."); } else { document.getElementById('p_sku').value = decodedText; }
+            }, (e) => { }).catch(err => { window.sysAlert("Cámara no soportada."); });
         };
         window.detenerCamara = (m) => { if(scanners[m]) scanners[m].stop().then(() => { document.getElementById(`reader-${m}`).classList.add('hidden'); document.getElementById(`btn-iniciar-camara-${m}`).classList.remove('hidden'); document.getElementById(`btn-detener-camara-${m}`).classList.add('hidden'); }).catch(e=>console.log(e)); };
 
-        // ACTUALIZACIÓN DE FILTROS EN LA VISTA
         function poblarFiltros() {
             let htmlCat = `<option value="Todas">Todas las categorías</option>`;
             window.categoriasUnicas.forEach(c => { if(c) htmlCat += `<option value="${c}">${c}</option>`; });
@@ -598,74 +652,46 @@
             document.getElementById('rep_cat').innerHTML = htmlCat;
         }
 
-        // CARGA CENTRAL DEL INVENTARIO (Uso de Memoria)
         window.cargarInventarioGeneral = async () => {
             const z = document.getElementById('zonaSelect').value; if(!z) return; const e = localStorage.getItem('empresaId');
             document.getElementById('tablaInventarioGeneralBody').innerHTML = "<tr><td colspan='7' class='p-8 text-center'>Cargando base de datos...</td></tr>";
             try {
                 const sn = await getDocs(collection(db, `${e}_Inventario_${z}`));
                 window.inventarioLocal = []; window.categoriasUnicas.clear();
-                sn.forEach((d) => {
-                    const p = d.data(); 
-                    window.inventarioLocal.push(p);
-                    if(p.categoria) window.categoriasUnicas.add(p.categoria);
-                });
-                poblarFiltros();
-                window.renderInventarioPantalla();
+                sn.forEach((d) => { const p = d.data(); window.inventarioLocal.push(p); if(p.categoria) window.categoriasUnicas.add(p.categoria); });
+                poblarFiltros(); window.renderInventarioPantalla();
                 if(!document.getElementById('tab-agotados').classList.contains('hidden')) window.renderAgotados();
             } catch(err) { document.getElementById('tablaInventarioGeneralBody').innerHTML = "<tr><td colspan='7' class='text-red-500 p-8'>Error de conexión</td></tr>"; }
         };
 
-        // RENDER INVENTARIO (CON FILTROS)
         window.renderInventarioPantalla = () => {
             const r = localStorage.getItem('userRol'); const tb = document.getElementById('tablaInventarioGeneralBody');
-            const txt = document.getElementById('filtro_inv_txt').value.toLowerCase();
-            const cat = document.getElementById('filtro_inv_cat').value;
-            const ord = document.getElementById('filtro_inv_ord').value;
-
-            let lista = window.inventarioLocal.filter(p => {
-                const coincideTxt = p.nombre.toLowerCase().includes(txt) || p.sku.toLowerCase().includes(txt);
-                const coincideCat = (cat === "Todas" || p.categoria === cat);
-                return coincideTxt && coincideCat;
-            });
-
-            // Ordenamiento
-            if(ord === 'nombre') lista.sort((a,b) => a.nombre.localeCompare(b.nombre));
-            if(ord === 'stock_asc') lista.sort((a,b) => a.stock - b.stock);
-            if(ord === 'stock_desc') lista.sort((a,b) => b.stock - a.stock);
-
+            const txt = document.getElementById('filtro_inv_txt').value.toLowerCase(); const cat = document.getElementById('filtro_inv_cat').value; const ord = document.getElementById('filtro_inv_ord').value;
+            let lista = window.inventarioLocal.filter(p => { return (p.nombre.toLowerCase().includes(txt) || p.sku.toLowerCase().includes(txt)) && (cat === "Todas" || p.categoria === cat); });
+            if(ord === 'nombre') lista.sort((a,b) => a.nombre.localeCompare(b.nombre)); if(ord === 'stock_asc') lista.sort((a,b) => a.stock - b.stock); if(ord === 'stock_desc') lista.sort((a,b) => b.stock - a.stock);
             let h = "";
             lista.forEach(p => {
-                const cc = (r === 'Dueño' || r === 'Gerente') ? `<td class="p-3">$${p.costo || 0}</td>` : ``;
-                const ca = (r === 'Dueño' || r === 'Gerente') ? `<td class="p-3"><button onclick="abrirModalEdicion('${p.sku}')" class="text-blue-600 bg-blue-50 px-3 py-2 rounded font-bold">✏️ Editar</button></td>` : ``;
+                const cc = (r === 'Dueño' || r === 'Gerente') ? `<td class="p-3">$${p.costo || 0}</td>` : ``; const ca = (r === 'Dueño' || r === 'Gerente') ? `<td class="p-3"><button onclick="abrirModalEdicion('${p.sku}')" class="text-blue-600 bg-blue-50 px-3 py-2 rounded font-bold">✏️ Editar</button></td>` : ``;
                 const stockVal = p.stock % 1 !== 0 ? p.stock.toFixed(3) : p.stock;
-                
                 let badges = `<span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded block mb-1 w-fit">${p.categoria || 'General'}</span>`;
                 if(p.es_granel) badges += `<span class="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded block w-fit font-bold mb-1">Granel</span>`;
-                if(p.caducidad) {
-                    const diff = Math.floor((new Date(p.caducidad) - Date.now()) / 86400000);
-                    if(diff <= 30) badges += `<span class="bg-red-100 text-red-700 text-[10px] px-2 py-1 rounded block w-fit font-bold">Vence en ${diff}d</span>`;
-                }
-
+                if(p.caducidad) { const diff = Math.floor((new Date(p.caducidad) - Date.now()) / 86400000); if(diff <= 30) badges += `<span class="bg-red-100 text-red-700 text-[10px] px-2 py-1 rounded block w-fit font-bold">Vence en ${diff}d</span>`; }
                 let precioStr = `<span class="text-green-600 font-bold block">$${p.precio}</span>`;
                 if (p.precio_promo && p.precio_promo > 0) precioStr = `<span class="text-xs text-red-500 line-through block">$${p.precio}</span><span class="text-green-600 font-bold block">$${p.precio_promo} <span class="text-[10px] text-red-500 font-normal">(Promo)</span></span>`;
                 if (p.cant_mayoreo > 0 && p.precio_mayoreo > 0) precioStr += `<span class="text-xs text-blue-600 font-bold block mt-1">$${p.precio_mayoreo} <span class="text-gray-500 font-normal">(x${p.cant_mayoreo}+)</span></span>`;
-                
                 h += `<tr class="border-b hover:bg-gray-50"><td class="p-3 font-mono text-gray-500 text-xs">${p.sku}</td><td class="p-3 font-bold">${p.nombre}</td><td class="p-3">${badges}</td><td class="p-3 text-center font-black ${p.stock<=(p.min_stk||0)?'text-red-500':''}">${stockVal}</td>${cc}<td class="p-3">${precioStr}</td>${ca}</tr>`;
-            }); tb.innerHTML = h || "<tr><td colspan='7' class='text-center p-8 text-gray-500'>No hay productos que coincidan con el filtro</td></tr>";
+            }); tb.innerHTML = h || "<tr><td colspan='7' class='text-center p-8 text-gray-500'>No hay productos</td></tr>";
         };
 
-        // VENTAS Y CARRITO (Original Mantenida)
         window.filtrarProductosVenta = () => {
             const i = document.getElementById('venta_busqueda').value.toLowerCase(); const c = document.getElementById('sugerencias_venta'); c.innerHTML = '';
             if (i.length < 1) { c.classList.add('hidden'); return; }
             const r = window.inventarioLocal.filter(p => p.sku.toLowerCase().includes(i) || p.nombre.toLowerCase().includes(i));
             if (r.length > 0) { 
                 c.classList.remove('hidden'); r.forEach(p => { 
-                    const precioActivo = window.calcularPrecioExacto(p, 1);
-                    const textoPromo = (precioActivo !== p.precio) ? `<span class="text-xs text-red-500 line-through mr-2">$${p.precio}</span>` : '';
+                    const pAct = window.calcularPrecioExacto(p, 1); const tP = (pAct !== p.precio) ? `<span class="text-xs text-red-500 line-through mr-2">$${p.precio}</span>` : '';
                     const d = document.createElement('div'); d.className = "p-4 hover:bg-orange-50 cursor-pointer border-b flex justify-between items-center"; 
-                    d.innerHTML = `<div><span class="text-orange-600 font-bold">${p.sku}</span><br><span class="text-gray-700">${p.nombre}</span></div> <div>${textoPromo}<span class="text-green-600 font-bold">$${precioActivo}</span></div>`; 
+                    d.innerHTML = `<div><span class="text-orange-600 font-bold">${p.sku}</span><br><span class="text-gray-700">${p.nombre}</span></div> <div>${tP}<span class="text-green-600 font-bold">$${pAct}</span></div>`; 
                     d.onclick = () => { window.agregarAlCarrito(p); document.getElementById('venta_busqueda').value = ''; c.classList.add('hidden'); }; c.appendChild(d); 
                 });
             } else { c.classList.add('hidden'); }
@@ -673,8 +699,9 @@
         document.addEventListener('click', (e) => { if(e.target.id !== 'venta_busqueda') document.getElementById('sugerencias_venta').classList.add('hidden'); });
 
         window.agregarAlCarrito = (p) => {
-            if(p.stock <= 0) return alert(`Agotado.`); const ex = window.carrito.find(i => i.sku === p.sku);
-            if (ex) { if(ex.cantidad < p.stock) { ex.cantidad++; ex.precioVentaReal = window.calcularPrecioExacto(ex, ex.cantidad); } else { return alert("Límite de stock."); } } 
+            if(p.stock <= 0) { window.sysAlert(`Agotado.`); return; } 
+            const ex = window.carrito.find(i => i.sku === p.sku);
+            if (ex) { if(ex.cantidad < p.stock) { ex.cantidad++; ex.precioVentaReal = window.calcularPrecioExacto(ex, ex.cantidad); } else { window.sysAlert("Límite de stock."); return; } } 
             else { let n = { ...p, cantidad: 1 }; n.precioVentaReal = window.calcularPrecioExacto(n, 1); window.carrito.push(n); }
             window.mostrarNotificacion(`✅ Agregado`); window.renderCarrito();
         };
@@ -682,8 +709,8 @@
         window.cambiarCantidadCarrito = (sku, val) => { 
             let cant = parseFloat(val); const item = window.carrito.find(p => p.sku === sku); 
             if(item) { 
-                if(!item.es_granel && cant % 1 !== 0) { window.mostrarNotificacion("⚠️ Este producto no es a granel."); cant = Math.floor(cant); }
-                if(cant > item.stock) { alert(`Límite ${item.stock}.`); cant = item.stock; } else if(cant <= 0) { cant = 1; } 
+                if(!item.es_granel && cant % 1 !== 0) { window.mostrarNotificacion("⚠️ Producto no es a granel."); cant = Math.floor(cant); }
+                if(cant > item.stock) { window.sysAlert(`Límite de inventario: ${item.stock}.`); cant = item.stock; } else if(cant <= 0) { cant = 1; } 
                 item.cantidad = cant; item.precioVentaReal = window.calcularPrecioExacto(item, cant); window.renderCarrito(); 
             } 
         };
@@ -693,8 +720,7 @@
             const tb = document.getElementById('tabla-carrito'); tb.innerHTML = ''; let t = 0;
             if (window.carrito.length === 0) { tb.innerHTML = '<tr><td colspan="4" class="text-center text-gray-400 py-8">Carrito vacío</td></tr>'; document.getElementById('gran-total').innerText = "$0.00"; return; }
             window.carrito.forEach((i, idx) => { 
-                const sub = i.precioVentaReal * i.cantidad; t += sub; 
-                const cant = i.cantidad % 1 !== 0 ? i.cantidad.toFixed(3) : i.cantidad;
+                const sub = i.precioVentaReal * i.cantidad; t += sub; const cant = i.cantidad % 1 !== 0 ? i.cantidad.toFixed(3) : i.cantidad;
                 const badge = (i.precioVentaReal === i.precio_mayoreo && i.precio_mayoreo > 0) ? `<span class="bg-green-100 text-green-700 text-[10px] px-1 rounded ml-2">MAYOREO</span>` : ``;
                 tb.innerHTML += `<tr class="border-b"><td class="py-4 font-bold text-gray-700 text-xs">${i.nombre}${badge}</td><td class="py-4 text-center"><input type="number" step="${i.es_granel?'any':'1'}" min="0.01" max="${i.stock}" value="${cant}" onchange="cambiarCantidadCarrito('${i.sku}', this.value)" class="w-20 p-2 border-2 rounded text-center"></td><td class="py-4 text-right text-green-600 font-bold">$${sub.toFixed(2)}</td><td class="py-4 text-right"><button onclick="quitarDelCarrito(${idx})" class="text-red-500">🗑️</button></td></tr>`; 
             }); 
@@ -702,7 +728,7 @@
         };
 
         window.procesarVentaCompleta = async () => {
-            if (window.carrito.length === 0) return alert("Carrito vacío.");
+            if (window.carrito.length === 0) { window.sysAlert("Carrito vacío."); return; }
             const btn = document.getElementById('btn-cobrar'); btn.disabled = true; btn.innerText = "Imprimiendo...";
             const z = document.getElementById('zonaSelect').value; const e = localStorage.getItem('empresaId'); const u = localStorage.getItem('currentUser');
             const ts = Date.now(); const f = new Date(ts).toLocaleString('es-MX'); const fol = "TK-" + ts.toString().slice(-6); let tot = 0; let tkF = "";
@@ -722,10 +748,9 @@
                 let ifr = document.getElementById('iframeImpresion'); if(!ifr) { ifr = document.createElement('iframe'); ifr.id = 'iframeImpresion'; ifr.style.display = 'none'; document.body.appendChild(ifr); }
                 ifr.contentWindow.document.open(); ifr.contentWindow.document.write(htmlTk); ifr.contentWindow.document.close();
                 setTimeout(() => { ifr.contentWindow.focus(); ifr.contentWindow.print(); window.carrito = []; window.renderCarrito(); window.cargarInventarioGeneral(); btn.disabled = false; btn.innerText = "✅ Cobrar e Imprimir"; }, 500);
-            } catch(er) { alert("Error."); btn.disabled = false; btn.innerText = "✅ Cobrar"; } 
+            } catch(er) { window.sysAlert("Error procesando venta."); btn.disabled = false; btn.innerText = "✅ Cobrar"; } 
         };
 
-        // ALERTAS STOCK (PRIORIDAD POR GANANCIA Y FILTROS)
         window.renderAgotados = () => {
             const tb = document.getElementById('tablaAgotadosBody');
             const filtroTipo = document.getElementById('alerta_filtro_tipo').value;
@@ -743,7 +768,7 @@
                 let esBajoStock = p.stock <= min;
                 let esPorCaducar = diasCad !== null && diasCad <= 30;
 
-                if(!esBajoStock && !esPorCaducar) return; // No es alerta
+                if(!esBajoStock && !esPorCaducar) return; 
                 if(filtroTipo === 'stock' && !esBajoStock) return;
                 if(filtroTipo === 'caducidad' && !esPorCaducar) return;
 
@@ -755,7 +780,6 @@
                 alertas.push({ ...p, gananciaNum: gananciaNum, estadoHTML: estadoStr.join('') });
             });
 
-            // PRIORIZAR POR GANANCIA UNITARIA (Negocios Inteligentes)
             alertas.sort((a, b) => b.gananciaNum - a.gananciaNum);
 
             let h = "";
@@ -772,26 +796,18 @@
             tb.innerHTML = h || "<tr><td colspan='4' class='p-8 text-center font-bold text-green-600'>✅ Todo en orden. Sin alertas actuales.</td></tr>";
         };
 
-        // MÓDULO PROVEEDORES
         window.guardarProveedor = async () => {
-            const nom = document.getElementById('prov_nombre').value.trim();
-            const tel = document.getElementById('prov_tel').value.trim();
-            const not = document.getElementById('prov_notas').value.trim();
-            const e = localStorage.getItem('empresaId');
+            const nom = document.getElementById('prov_nombre').value.trim(); const tel = document.getElementById('prov_tel').value.trim(); const not = document.getElementById('prov_notas').value.trim(); const e = localStorage.getItem('empresaId');
+            let dias = []; document.querySelectorAll('.prov_dia:checked').forEach(c => dias.push(c.value));
             
-            let dias = [];
-            document.querySelectorAll('.prov_dia:checked').forEach(c => dias.push(c.value));
-            
-            if(!nom) return alert("Nombre obligatorio.");
+            if(!nom) { window.sysAlert("Nombre obligatorio."); return; }
             try {
-                // Usamos el nombre como ID (sin espacios) para simplificar
                 const id = nom.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
                 await setDoc(doc(db, `${e}_Proveedores`, id), { id, nombre: nom, telefono: tel, dias: dias, notas: not, timestamp: Date.now() });
                 window.mostrarNotificacion("✅ Proveedor guardado");
-                document.getElementById('prov_nombre').value = ''; document.getElementById('prov_tel').value = ''; document.getElementById('prov_notas').value = '';
-                document.querySelectorAll('.prov_dia').forEach(c => c.checked = false);
+                document.getElementById('prov_nombre').value = ''; document.getElementById('prov_tel').value = ''; document.getElementById('prov_notas').value = ''; document.querySelectorAll('.prov_dia').forEach(c => c.checked = false);
                 window.cargarProveedores();
-            } catch(er) { alert("Error al guardar proveedor."); }
+            } catch(er) { window.sysAlert("Error al guardar proveedor."); }
         };
 
         window.cargarProveedores = async () => {
@@ -800,20 +816,18 @@
             try {
                 const sn = await getDocs(collection(db, `${e}_Proveedores`));
                 sn.forEach(d => {
-                    const pr = d.data();
-                    const diasStr = pr.dias.length > 0 ? pr.dias.join(', ') : 'Llamada previa';
+                    const pr = d.data(); const diasStr = pr.dias.length > 0 ? pr.dias.join(', ') : 'Llamada previa';
                     h += `<tr class="border-b"><td class="p-3"><span class="font-bold text-teal-700 block">${pr.nombre}</span><span class="text-xs text-gray-500">📞 ${pr.telefono||'Sin Tel'}</span></td><td class="p-3 text-sm font-bold">${diasStr}</td><td class="p-3 text-xs text-gray-600 whitespace-pre-wrap">${pr.notas}</td><td class="p-3"><button onclick="eliminarProveedor('${pr.id}')" class="text-red-500 hover:bg-red-50 px-2 py-1 rounded">🗑️</button></td></tr>`;
                 }); tb.innerHTML = h || "<tr><td colspan='4' class='text-center p-8'>Sin proveedores registrados</td></tr>";
             } catch (er) { tb.innerHTML = "<tr><td colspan='4' class='text-center p-8 text-red-500'>Error</td></tr>"; }
         };
 
         window.eliminarProveedor = async (id) => {
-            if(!confirm("¿Borrar este proveedor?")) return;
+            const cf = await window.sysConfirm("¿Borrar este proveedor permanentemente?"); if(!cf) return;
             const e = localStorage.getItem('empresaId');
-            try { await deleteDoc(doc(db, `${e}_Proveedores`, id)); window.cargarProveedores(); } catch(er) { alert("Error."); }
+            try { await deleteDoc(doc(db, `${e}_Proveedores`, id)); window.cargarProveedores(); } catch(er) { window.sysAlert("Error al borrar."); }
         };
 
-        // INGRESO Y EDICIÓN DE PRODUCTOS
         window.guardarProducto = async () => {
             const sku = document.getElementById('p_sku').value.trim(); const nom = document.getElementById('p_nom').value.trim(); const cat = document.getElementById('p_cat').value.trim() || "General";
             const cos = parseFloat(document.getElementById('p_cos').value) || 0; const pre = parseFloat(document.getElementById('p_pre').value) || 0; 
@@ -822,13 +836,13 @@
             const isGranel = document.getElementById('p_granel').checked; const cad = document.getElementById('p_caducidad').value || null;
 
             const z = document.getElementById('zonaSelect').value; const e = localStorage.getItem('empresaId'); const u = localStorage.getItem('currentUser'); const ts = Date.now(); const f = new Date(ts).toLocaleString('es-MX');
-            if(!sku || !nom) return alert("SKU y Nombre obligatorios.");
+            if(!sku || !nom) { window.sysAlert("SKU y Nombre obligatorios."); return; }
             try {
                 const r = `${e}_Inventario_${z}`; const d = await getDoc(doc(db, r, sku)); let sF = stk; if (d.exists()) sF += d.data().stock;
                 await setDoc(doc(db, r, sku), { sku, nombre: nom, categoria: cat, costo: cos, precio: pre, precio_mayoreo: pMay, cant_mayoreo: cMay, es_granel: isGranel, stock: sF, min_stk: minS, max_stk: maxS, caducidad: cad, zona: z, precio_promo: 0 }, { merge: true }); 
                 await addDoc(collection(db, `${e}_Historial_Ingresos`), { sku, nombre: nom, cantidad: stk, zona: z, usuario: u, fechaRegistro: f, timestamp: ts, tipoMovimiento: "ENTRADA" });
                 window.mostrarNotificacion("📦 Producto ingresado"); ['p_sku','p_nom','p_cat','p_cos','p_pre','p_mayoreo','p_cant_mayoreo','p_stk','p_min','p_max','p_caducidad'].forEach(id => document.getElementById(id).value = ''); document.getElementById('p_granel').checked = false; window.cargarInventarioGeneral();
-            } catch (err) { alert("Error."); }
+            } catch (err) { window.sysAlert("Error de conexión."); }
         };
 
         window.abrirModalEdicion = (sku) => { 
@@ -849,21 +863,20 @@
             const stk = parseFloat(document.getElementById('edit_stk').value) || 0; const minS = parseFloat(document.getElementById('edit_min').value) || 0; const maxS = parseFloat(document.getElementById('edit_max').value) || 0;
             const isGranel = document.getElementById('edit_granel').checked; const cad = document.getElementById('edit_caducidad').value || null;
 
-            if(!nom) return alert("Nombre obligatorio.");
+            if(!nom) { window.sysAlert("Nombre obligatorio."); return; }
             const z = document.getElementById('zonaSelect').value; const e = localStorage.getItem('empresaId'); const u = localStorage.getItem('currentUser'); const ts = Date.now(); const f = new Date(ts).toLocaleString('es-MX');
             try {
                 let updates = { nombre: nom, categoria: cat, costo: cos, precio: pre, precio_promo: promo, precio_mayoreo: pMay, cant_mayoreo: cMay, es_granel: isGranel, stock: stk, min_stk: minS, max_stk: maxS, caducidad: cad };                 
                 await setDoc(doc(db, `${e}_Inventario_${z}`, sku), updates, { merge: true });
                 await addDoc(collection(db, `${e}_Historial_Ingresos`), { sku, nombre: nom, cantidad: stk, zona: z, usuario: u, fechaRegistro: f, timestamp: ts, tipoMovimiento: "AJUSTE" });
                 window.mostrarNotificacion("✅ Producto actualizado"); window.cerrarModalEdicion(); window.cargarInventarioGeneral();
-            } catch(err) { alert("Error al editar."); }
+            } catch(err) { window.sysAlert("Error al editar."); }
         };
 
-        // REPORTES
         window.generarReporte = async () => {
             const z = document.getElementById('zonaSelect').value; const e = localStorage.getItem('empresaId'); 
             const fIniStr = document.getElementById('rep_inicio').value; const fFinStr = document.getElementById('rep_fin').value; const fCat = document.getElementById('rep_cat').value;
-            if(!fIniStr || !fFinStr) return alert("Selecciona fechas.");
+            if(!fIniStr || !fFinStr) { window.sysAlert("Selecciona fechas."); return; }
             const tInicio = new Date(fIniStr + "T00:00:00").getTime(); const tFin = new Date(fFinStr + "T23:59:59").getTime();
             const tb = document.getElementById('tablaReportesBody'); tb.innerHTML = "<tr><td colspan='6' class='p-8 text-center'>Procesando...</td></tr>"; 
             let totalDinero = 0; let cantVentas = 0; let cantTickets = 0; let h = ""; window.datosReporteCSV = [["Fecha", "Vendedor", "SKU", "Producto", "Categoria", "Cantidad", "Total_Venta"]]; 
@@ -871,9 +884,7 @@
                 const qVentas = query(collection(db, `${e}_Historial_Ventas`), where("zona", "==", z)); const vSn = await getDocs(qVentas); let ventasPeriodo = [];
                 vSn.forEach(d => { const v = d.data(); if(v.timestamp >= tInicio && v.timestamp <= tFin) { if(fCat === 'Todas' || v.categoria === fCat) { ventasPeriodo.push(v); totalDinero += (v.precioVenta * v.cantidad); cantVentas += v.cantidad; } }});
                 
-                // Agrupar por ticket (mismo timestamp = mismo ticket aprox) para el ticket promedio
-                const ticketsUnicos = new Set(ventasPeriodo.map(v => v.timestamp)); cantTickets = ticketsUnicos.size;
-                const tkPromedio = cantTickets > 0 ? (totalDinero / cantTickets) : 0;
+                const ticketsUnicos = new Set(ventasPeriodo.map(v => v.timestamp)); cantTickets = ticketsUnicos.size; const tkPromedio = cantTickets > 0 ? (totalDinero / cantTickets) : 0;
 
                 document.getElementById('rep_total_vendido').innerText = `$${totalDinero.toLocaleString('es-MX', {minimumFractionDigits: 2})}`; document.getElementById('rep_piezas_vendidas').innerText = cantVentas.toLocaleString(); document.getElementById('rep_ticket_promedio').innerText = `$${tkPromedio.toLocaleString('es-MX', {minimumFractionDigits: 2})}`;
                 ventasPeriodo.sort((a,b) => b.timestamp - a.timestamp);
@@ -885,13 +896,12 @@
             } catch (err) { tb.innerHTML = `<tr><td colspan='6' class='text-red-500'>Error</td></tr>`; }
         };
 
-        window.descargarCSV = () => { /* Original mantenida */
-            if(window.datosReporteCSV.length <= 1) return alert("Genera el reporte."); let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
+        window.descargarCSV = () => {
+            if(window.datosReporteCSV.length <= 1) { window.sysAlert("Genera el reporte primero."); return; } let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
             window.datosReporteCSV.forEach(function(rowArray) { let row = rowArray.map(item => `"${item}"`).join(","); csvContent += row + "\r\n"; });
             const link = document.createElement("a"); link.setAttribute("href", encodeURI(csvContent)); link.setAttribute("download", `Reporte.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
         };
 
-        // KARDEX, CARGA MASIVA Y USUARIOS: Se mantienen exactamente igual por límite de espacio.
         window.cargarKardex = async (tipo = 'entradas') => {
             window.kardexActual = tipo; 
             document.getElementById('btn-kardex-entradas').className = tipo === 'entradas' ? 'px-4 py-2 font-bold text-green-600 border-b-4 border-green-600' : 'px-4 py-2 font-bold text-gray-400 border-b-4 border-transparent';
@@ -936,12 +946,12 @@
                 } catch (er) { s.className = "mt-4 p-4 bg-red-50 text-red-700 rounded-lg"; s.innerText = "❌ Error en archivo."; }
             }; l.readAsText(a);
         };
-        window.vaciarInventario = async () => { const z = document.getElementById('zonaSelect').value; const p = prompt(`Precaución. Escribe VACIAR para borrar toda la zona ${z}:`); if(p !== 'VACIAR') return; try { const sn = await getDocs(collection(db, `${localStorage.getItem('empresaId')}_Inventario_${z}`)); sn.forEach(async (d) => { await deleteDoc(doc(db, `${localStorage.getItem('empresaId')}_Inventario_${z}`, d.id)); }); alert("Borrado."); window.cargarInventarioGeneral(); } catch(e) { alert("Error."); } };
-        window.crearUsuarioSecundario = async () => { const u = document.getElementById('new_user').value.trim(); const em = document.getElementById('new_email').value.trim().toLowerCase(); const p = document.getElementById('new_pass').value.trim(); const r = document.getElementById('new_role').value; const emp = localStorage.getItem('empresaId'); const zn = JSON.parse(localStorage.getItem('zonas') || "[]"); if(!u || !p || !em) return alert("Llena todos los datos"); try { await createUserWithEmailAndPassword(secondaryAuth, em, p); await secondaryAuth.signOut(); await setDoc(doc(db, "SaaS_Directorio", u), { email: em }); await setDoc(doc(db, "SaaS_Usuarios", u), { empresaId: emp, rol: r, zonas: zn, usuario: u }); alert(`✅ Usuario creado.`); ['new_user', 'new_email', 'new_pass'].forEach(id => document.getElementById(id).value = ''); window.cargarUsuarios(); } catch(er) { alert("Error: " + er.message); } };
+        
+        window.vaciarInventario = async () => { const z = document.getElementById('zonaSelect').value; const p = await window.sysPrompt(`Precaución. Escribe VACIAR para borrar toda la zona ${z}:`); if(p !== 'VACIAR') return; try { const sn = await getDocs(collection(db, `${localStorage.getItem('empresaId')}_Inventario_${z}`)); sn.forEach(async (d) => { await deleteDoc(doc(db, `${localStorage.getItem('empresaId')}_Inventario_${z}`, d.id)); }); window.sysAlert("Borrado exitoso."); window.cargarInventarioGeneral(); } catch(e) { window.sysAlert("Error al borrar."); } };
+        window.crearUsuarioSecundario = async () => { const u = document.getElementById('new_user').value.trim(); const em = document.getElementById('new_email').value.trim().toLowerCase(); const p = document.getElementById('new_pass').value.trim(); const r = document.getElementById('new_role').value; const emp = localStorage.getItem('empresaId'); const zn = JSON.parse(localStorage.getItem('zonas') || "[]"); if(!u || !p || !em) { window.sysAlert("Llena todos los datos"); return; } try { await createUserWithEmailAndPassword(secondaryAuth, em, p); await secondaryAuth.signOut(); await setDoc(doc(db, "SaaS_Directorio", u), { email: em }); await setDoc(doc(db, "SaaS_Usuarios", u), { empresaId: emp, rol: r, zonas: zn, usuario: u }); window.sysAlert(`✅ Usuario creado con éxito.`); ['new_user', 'new_email', 'new_pass'].forEach(id => document.getElementById(id).value = ''); window.cargarUsuarios(); } catch(er) { window.sysAlert("Error: " + er.message); } };
         window.cargarUsuarios = async () => { const e = localStorage.getItem('empresaId'); const tb = document.getElementById('tablaUsuariosBody'); tb.innerHTML = '<tr><td colspan="3" class="text-center p-8">Cargando...</td></tr>'; try { const q = query(collection(db, "SaaS_Usuarios"), where("empresaId", "==", e)); const sn = await getDocs(q); let h = ''; sn.forEach(d => { const u = d.data(); h += `<tr class="border-b hover:bg-blue-50 transition"><td class="p-3 font-bold">${u.usuario || d.id}</td><td class="p-3 font-bold ${u.rol==='Dueño'?'text-blue-600':'text-green-600'}">${u.rol}</td><td class="p-3 text-gray-500">${u.zonas.join(', ')}</td></tr>`; }); tb.innerHTML = h || '<tr><td colspan="3" class="text-center p-8">Sin usuarios</td></tr>'; } catch(er) { tb.innerHTML = `<tr><td colspan="3" class="text-center text-red-500 p-8">Error</td></tr>`; } };
-        window.agregarNuevaZona = async () => { const nZ = prompt("Nueva zona:"); if(nZ) { const u = localStorage.getItem('currentUser'); const z = JSON.parse(localStorage.getItem('zonas') || "[]"); if(!z.includes(nZ)) { z.push(nZ); await setDoc(doc(db, "SaaS_Usuarios", u), { zonas: z }, { merge: true }); localStorage.setItem('zonas', JSON.stringify(z)); iniciarApp(); } } };
+        window.agregarNuevaZona = async () => { const nZ = await window.sysPrompt("Ingresa el nombre de la nueva zona:"); if(nZ) { const u = localStorage.getItem('currentUser'); const z = JSON.parse(localStorage.getItem('zonas') || "[]"); if(!z.includes(nZ)) { z.push(nZ); await setDoc(doc(db, "SaaS_Usuarios", u), { zonas: z }, { merge: true }); localStorage.setItem('zonas', JSON.stringify(z)); iniciarApp(); } } };
 
-        // INICIO
         window.onload = () => { if(localStorage.getItem('currentUser')) iniciarApp(); };
     </script>
 </body>
